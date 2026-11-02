@@ -1,11 +1,14 @@
+import pickle
+
 import numpy as np
 import pytest
+from sklearn.neighbors import NearestNeighbors
 from xgboost import XGBRegressor
 
 from artimation.data import FEATURES, generate
 from artimation.experiment import run
 from artimation.explain import lime_explain, local_accuracy_mae, mean_ndcg, shap_values
-from artimation.models import WeightedCBR, train_xgb
+from artimation.models import DIST_DECIMALS, WeightedCBR, train_xgb
 
 
 @pytest.fixture(scope="module")
@@ -54,6 +57,78 @@ def test_additive_cbr_sums_to_prediction(setup):
     np.testing.assert_allclose(cbr.additive_attributions(Xte, pred).sum(1), pred, atol=1e-6)
 
 
+def _brute_neighbors(cbr, X_fit, X):
+    """Reference: rank every case by (distance rounded like WeightedCBR, case index)."""
+    E, Q = cbr._embed(X_fit), cbr._embed(X)
+    d = np.round(np.sqrt(((Q[:, None, :] - E[None]) ** 2).sum(-1)), DIST_DECIMALS)
+    idx = np.array([np.lexsort((np.arange(len(E)), row))[:cbr.k] for row in d])
+    return np.take_along_axis(d, idx, 1), idx
+
+
+def test_cbr_duplicates_tie_to_lowest_index():
+    X = np.array([[2, 2], [0, 0], [1, 1], [0, 0], [0, 0]], dtype=float)
+    cbr = WeightedCBR([1, 1], k=4).fit(X, np.arange(5))
+    d, i = cbr.neighbors(np.array([[0, 0]]))
+    np.testing.assert_array_equal(i, [[1, 3, 4, 2]])
+    np.testing.assert_array_equal(d[0, :3], 0)
+
+
+def test_cbr_tie_beyond_candidate_pool_uses_full_scan():
+    # 12 distinct cases on a circle around the query, all tied after rounding; k=2 -> pool of 4 distinct cases.
+    ang = np.arange(12) * np.pi / 6
+    ring = np.c_[np.cos(ang), np.sin(ang)][np.random.default_rng(0).permutation(12)]
+    X = np.r_[ring, [[0.1, 0.0]], ring[:3]]  # a closer case at index 12 and duplicates of the ring at 13-15
+    cbr = WeightedCBR([1, 1], k=2).fit(X, np.arange(len(X)))
+    calls = []
+    top_k = cbr._top_k
+    cbr._top_k = lambda d, u: calls.append(len(u)) or top_k(d, u)
+    q = np.array([[0.0, 0.0]])
+    d, i = cbr.neighbors(q)
+    assert len(cbr.cases_) in calls  # the fallback ranked every distinct case
+    rd, ri = _brute_neighbors(cbr, X, q)
+    np.testing.assert_array_equal(i, ri)
+    np.testing.assert_array_equal(d, rd)
+    assert i[0].tolist() == [12, 0]  # the closer case, then the lowest-index tied ring case
+
+
+@pytest.mark.parametrize("k", [1, 3, 5])
+def test_cbr_neighbors_match_brute_force_on_tied_grid(k):
+    rng = np.random.default_rng(k)
+    X = rng.integers(0, 3, size=(60, 3)).astype(float)  # 27 possible cases: many duplicates and ties
+    cbr = WeightedCBR([1, 2, 3], k=k).fit(X, rng.normal(size=60))
+    Q = rng.integers(0, 3, size=(40, 3)).astype(float) + rng.choice([0, 0.5], size=(40, 3))
+    d, i = cbr.neighbors(Q)
+    rd, ri = _brute_neighbors(cbr, X, Q)
+    np.testing.assert_array_equal(i, ri)
+    np.testing.assert_array_equal(d, rd)
+
+
+def test_cbr_k_larger_than_distinct_cases():
+    X = np.array([[1, 0], [0, 0], [1, 0], [0, 0], [1, 0]], dtype=float)
+    cbr = WeightedCBR([1, 1], k=4).fit(X, np.arange(5))
+    _, i = cbr.neighbors(np.array([[0, 0], [1, 0]]))
+    np.testing.assert_array_equal(i, [[1, 3, 0, 2], [0, 2, 4, 1]])
+
+
+def test_cbr_k_larger_than_cases_raises():
+    with pytest.raises(ValueError, match="k=4"):
+        WeightedCBR([1, 1], k=4).fit(np.zeros((3, 2)), np.zeros(3))
+
+
+def test_cbr_unpickles_old_index_without_members():
+    rng = np.random.default_rng(0)
+    X = rng.integers(0, 3, size=(40, 2)).astype(float)
+    new = WeightedCBR([1, 3], k=3).fit(X, rng.normal(size=40))
+    old = WeightedCBR.__new__(WeightedCBR)
+    state = {k: v for k, v in new.__dict__.items() if k not in ("cases_", "members_", "offsets_")}
+    state["nn_"] = NearestNeighbors(n_neighbors=3).fit(new._embed(X))  # pre-dedup index over every case
+    old.__dict__.update(state)
+    restored = pickle.loads(pickle.dumps(old))
+    Q = rng.integers(0, 3, size=(10, 2)).astype(float)
+    for got, want in zip(restored.neighbors(Q), new.neighbors(Q)):
+        np.testing.assert_array_equal(got, want)
+
+
 def test_shap_local_accuracy_tree_and_kernel(setup):
     Xtr, _, Xte, _, xgb = setup
     phi, base = shap_values(xgb, Xte[:50], method="tree")
@@ -70,6 +145,15 @@ def test_lime_runs_discretized_and_continuous_and_ndcg_bounds(setup):
     assert phi_d.shape == (5, 42) and np.isfinite(pred_d).all()
     assert phi_c.shape == (5, 42) and np.isfinite(pred_c).all()
     assert mean_ndcg(phi_d, phi_d) == pytest.approx(1.0)
+
+
+def test_mean_ndcg_broadcasts_single_row_on_either_side():
+    ref, att = np.array([3.0, 2.0, 1.0]), np.array([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0]])
+    # a 1-row attribution is compared with every reference row (row 1 used to be silently dropped)
+    assert mean_ndcg(att, ref) == pytest.approx((mean_ndcg(att[0], ref) + mean_ndcg(att[1], ref)) / 2)
+    assert mean_ndcg(att, ref) < 1.0
+    with pytest.raises(ValueError, match="shapes do not match"):
+        mean_ndcg(att, np.ones((3, 3)))
 
 
 
@@ -93,12 +177,22 @@ def test_shap_tree_and_kernel_roughly_agree(small):
     assert np.abs(phi_t[:, 3]).max() < 1e-9 and np.abs(phi_k[:, 3]).max() < 1e-6
 
 
-def test_shap_kernel_is_deterministic_with_seed(small):
-    X, model, _ = small
-    a = shap_values(model, X[:3], method="kernel", X_bg=X, nsamples=100, seed=7)
-    b = shap_values(model, X[:3], method="kernel", X_bg=X, nsamples=100, seed=7)
+def test_shap_kernel_is_deterministic_with_seed():
+    # 20 features: 2^20 coalitions >> nsamples, so shap must sample them (with M=4 it enumerates all 16).
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 20))
+    model = XGBRegressor(n_estimators=20, max_depth=2, random_state=0).fit(X, X @ rng.normal(size=20))
+    np.random.seed(123)
+    a = shap_values(model, X[:2], method="kernel", X_bg=X, nsamples=100, seed=7)
+    after_a = np.random.random()
+    np.random.seed(123)
+    np.random.random(5)  # a different global state must not change the result
+    b = shap_values(model, X[:2], method="kernel", X_bg=X, nsamples=100, seed=7)
     np.testing.assert_array_equal(a[0], b[0])
     assert a[1] == b[1]
+    # the caller's global numpy random stream is left untouched
+    np.random.seed(123)
+    assert np.random.random() == after_a
 
 
 def test_shap_unknown_method_raises(small):

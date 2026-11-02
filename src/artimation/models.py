@@ -31,6 +31,8 @@ class WeightedCBR:
 
     def fit(self, X, y):
         X = np.asarray(X, dtype=float)
+        if self.k > len(y):
+            raise ValueError(f"k={self.k} neighbours requested but only {len(y)} cases to fit")
         self.min_, self.range_ = X.min(0), np.where(np.ptp(X, 0) == 0, 1, np.ptp(X, 0))
         self.y_ = np.asarray(y, dtype=float)
         self._index(self._embed(X))

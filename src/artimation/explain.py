@@ -20,7 +20,14 @@ def shap_values(model, X, method="tree", X_bg=None, nsamples=200, seed=0):
         if len(bg) > 25:
             bg = bg[rng.choice(len(bg), 25, replace=False)]
         explainer = shap.KernelExplainer(model.predict, bg)
-        phi = explainer.shap_values(X, nsamples=nsamples, silent=True)
+        # KernelExplainer samples coalitions with the global np.random (no seed parameter in shap 0.54):
+        # seed it for reproducibility, then restore the caller's state.
+        state = np.random.get_state()
+        np.random.seed(seed)
+        try:
+            phi = explainer.shap_values(X, nsamples=nsamples, silent=True)
+        finally:
+            np.random.set_state(state)
         return np.asarray(phi, dtype=float), float(np.ravel(explainer.expected_value)[0])
     explainer = shap.TreeExplainer(model)
     phi = explainer.shap_values(X)
@@ -63,4 +70,8 @@ def mean_ndcg(reference, attribution):
     ref, att = np.abs(np.atleast_2d(reference)), np.abs(np.atleast_2d(attribution))
     if ref.shape[0] == 1:
         ref = np.repeat(ref, len(att), axis=0)
+    if att.shape[0] == 1:
+        att = np.repeat(att, len(ref), axis=0)
+    if ref.shape != att.shape:
+        raise ValueError(f"mean_ndcg: reference {ref.shape} and attribution {att.shape} shapes do not match")
     return float(np.mean([ndcg_score(r[None], a[None]) for r, a in zip(ref, att)]))
