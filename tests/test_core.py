@@ -5,18 +5,22 @@ import pytest
 from sklearn.neighbors import NearestNeighbors
 from xgboost import XGBRegressor
 
-from artimation.data import FEATURES, generate
-from artimation.experiment import run
+from artimation.data import FEATURES, _CATALOG, _N_CASES, _N_MACRO, _N_MICRO, generate
+from artimation.experiment import SUBSETS, _build_masks, run
 from artimation.explain import lime_explain, local_accuracy_mae, mean_ndcg, shap_values
-from artimation.models import DIST_DECIMALS, WeightedCBR, train_xgb
+from artimation.models import DIST_DECIMALS, WeightedCBR
 
 
 @pytest.fixture(scope="module")
-def setup():
-    tr, te = generate(6000, 0), generate(300, 1)
-    Xtr, ytr, Xte, yte = tr[FEATURES].to_numpy(), tr["delay"].to_numpy(), te[FEATURES].to_numpy(), te["delay"].to_numpy()
-    xgb = train_xgb(Xtr, ytr)
-    return Xtr, ytr, Xte, yte, xgb
+def exp():
+    return run(n_train=6000, n_test=300, n_explain=25, seed=0, verbose=False)
+
+
+@pytest.fixture(scope="module")
+def setup(exp):
+    Xtr, ytr = exp["train"][FEATURES].to_numpy(), exp["train"]["delay"].to_numpy()
+    Xte, yte = exp["test"][FEATURES].to_numpy(), exp["y_test"]
+    return Xtr, ytr, Xte, yte, exp["xgb"]
 
 
 
@@ -33,6 +37,8 @@ def small():
 def test_data_has_42_features():
     df = generate(200, 3)
     assert len(FEATURES) == 42 and df[FEATURES].shape == (200, 42) and df["delay"].notna().all()
+    assert (_N_MACRO, _N_MICRO, _N_CASES) == (8, 256, 2048)
+    assert len(_CATALOG["_smooth_delay"]) == 2048
 
 
 def test_cbr_k3_average_and_beats_xgb_on_recurring_cases(setup):
@@ -219,10 +225,29 @@ def test_lime_continuous_recovers_model_slopes(small):
     assert (phi[:, 0] > 0).all() and (phi[:, 1] < 0).all()
     assert (np.abs(phi[:, 0]) > np.abs(phi[:, 2])).all() and (np.abs(phi[:, 3]) < 0.2).all()
 
-def test_experiment_run_tables_structure():
-    res = run(n_train=1500, n_test=200, n_explain=15, seed=0, verbose=False)
+def test_experiment_run_tables_structure(exp):
+    masks = _build_masks(np.arange(100, dtype=float))
+    assert set(masks) == {"All", "100k", "67k"}
+    assert masks["All"].sum() == 100 and masks["100k"].sum() == round(100 * SUBSETS["100k"]) and masks["67k"].sum() == round(100 * SUBSETS["67k"])
     for sub in ("All", "100k", "67k"):
-        assert sub in res["table1"]["CBR"] and sub in res["table1"]["XGB"]
-        assert sub in res["table2"]["SHAP"] and sub in res["table2"]["LIME"]
-        assert 0.0 <= res["table3"]["SHAP"]["Global CBR"][sub] <= 1.0
-        assert 0.0 <= res["table3"]["LIME"]["Additive CBR"][sub] <= 1.0
+        assert sub in exp["table1"]["CBR"] and sub in exp["table1"]["XGB"]
+        assert sub in exp["table2"]["SHAP"] and sub in exp["table2"]["LIME"]
+        assert 0.0 <= exp["table3"]["SHAP"]["Global CBR"][sub] <= 1.0
+        assert 0.0 <= exp["table3"]["LIME"]["Additive CBR"][sub] <= 1.0
+
+
+def test_table1_cbr_beats_xgb_on_recurring_cases(exp):
+    for sub in ("All", "100k", "67k"):
+        assert exp["table1"]["CBR"][sub][0] < exp["table1"]["XGB"][sub][0]
+
+
+def test_table2_local_accuracy_shap_and_lime(exp):
+    for sub in ("All", "100k", "67k"):
+        assert exp["table2"]["SHAP"][sub][0] < 1e-3
+        assert exp["table2"]["LIME"][sub][0] > 1.0
+
+
+def test_table3_ndcg_ordering_lime_global_and_shap_additive(exp):
+    for sub in ("All", "100k", "67k"):
+        assert exp["table3"]["LIME"]["Global CBR"][sub] > exp["table3"]["LIME"]["Additive CBR"][sub]
+        assert exp["table3"]["SHAP"]["Additive CBR"][sub] > exp["table3"]["SHAP"]["Global CBR"][sub]

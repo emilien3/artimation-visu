@@ -18,7 +18,9 @@ ARTIFACTS = Path(__file__).resolve().parents[2] / "artifacts"
 SUBSETS = {"All": 1.0, "100k": 100650 / 158147, "67k": 67495 / 158147}
 
 
-def _build_masks(errors, n):
+def _build_masks(errors, n=None):
+    """Build All / 100k / 67k boolean masks selecting the most accurate instances."""
+    n = len(errors) if n is None else n
     order = np.argsort(errors)
     masks = {}
     for name, frac in SUBSETS.items():
