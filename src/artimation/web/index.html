@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector+ — Studio de conflits aériens</title>
+<style>{{STYLE}}</style>
+</head>
+<body>
+<main class="workspace">
+  <aside class="sidebar">
+    <section class="fleet-section">
+      <div class="section-title"><h1>Avions</h1><span id="fleet-count" class="badge">00</span></div>
+      <div class="generate-row"><label for="count">N</label><input id="count" type="number" min="1" max="100" value="5" aria-label="Nombre d'avions"><button id="generate" class="button">Générer</button></div>
+      <button id="add" class="button add-button">＋ Placer un avion</button>
+      <div class="list-label"><span>INDICATIF</span><span>NIVEAU · VITESSE / CAP</span></div>
+      <div id="fleet" class="fleet" aria-label="Liste des avions"></div>
+    </section>
+    <section class="inspector">
+      <div class="section-title"><h2>Avion sélectionné</h2><span class="tiny-label">MODIFIER LE VECTEUR</span></div>
+      <div class="selected-title"><span class="aircraft-dot"></span><strong id="selected-name">—</strong><button id="remove" class="icon-button" title="Supprimer l'avion" aria-label="Supprimer l'avion">×</button></div>
+      <div class="field-grid"><label>Vitesse <span>kt</span><input id="speed" type="number" min="60" max="900" step="10"></label><label>Cap <span>°</span><input id="heading" type="number" min="0" max="359" step="1"></label></div>
+      <div class="field-grid"><label>Niveau <span>FL</span><input id="level" type="number" min="0" max="500" step="10"></label><label>Taux vert. <span>ft/min</span><input id="vz" type="number" min="-6000" max="6000" step="100"></label></div>
+      <label class="range-label" for="speed-range">Vitesse <span id="speed-label"></span></label><input id="speed-range" type="range" min="60" max="900" step="1">
+      <p class="hint">Glisser l'avion pour le déplacer.<br>Glisser la pointe ronde de la flèche pour l'orienter.<br>Longueur de la flèche = 3 minutes de vol.</p>
+    </section>
+    <section class="scenario-panel">
+      <div class="section-title"><h2>Situation</h2></div>
+      <select id="scenario" aria-label="Situation"></select>
+      <p class="solution-intro" id="scenario-note"></p>
+    </section>
+    <section class="solver-panel">
+      <div class="section-title"><h2>Algorithme génétique</h2><span class="tiny-label">RÉSOLUTION</span></div>
+      <div class="field-grid"><label>Population<input id="ga-pop" type="number" min="20" max="300" step="10" value="100"></label><label>Générations<input id="ga-gens" type="number" min="10" max="300" step="10" value="100"></label></div>
+      <div class="field-grid"><label>Graine<input id="ga-seed" type="number" min="0" max="9999" step="1" value="0"></label><label class="check-label"><input id="ga-vertical" type="checkbox" checked> changer de niveau</label></div>
+      <button id="run-ga" class="button run-button">▶ Lancer l'algorithme</button>
+      <div class="progress" id="ga-progress" hidden><i></i></div>
+      <p id="ga-status" class="solution-intro"></p>
+      <label class="range-label" for="solution-source">Solution affichée</label>
+      <select id="solution-source" aria-label="Solution affichée"><option value="none">Routes d'origine (aucune)</option></select>
+    </section>
+    <section class="solution-panel">
+      <label class="solution-toggle" for="show-solutions"><span>Caps sûrs</span><input id="show-solutions" type="checkbox" role="switch" aria-controls="solution-details"></label>
+      <p class="solution-intro">Affiche les caps qui éloignent l'avion sélectionné de tout le trafic.</p>
+      <div id="solution-details" hidden>
+        <div class="solution-summary"><strong id="solution-coverage">—</strong><span>de l'espace des caps</span></div>
+        <p id="solution-status" class="solution-status"></p>
+        <div id="heading-space" class="heading-space" aria-label="Caps sûrs, du nord dans le sens horaire"></div>
+        <div class="heading-ticks"><span>0°</span><span>90°</span><span>180°</span><span>270°</span><span>360°</span></div>
+        <div class="solution-key"><span><i class="safe-swatch"></i> Sûr</span><span><i class="unsafe-swatch"></i> Conflit</span></div>
+        <div id="safe-ranges" class="safe-ranges" aria-label="Appliquer un cap d'une plage sûre"></div>
+        <p id="solution-assumptions" class="solution-intro"></p>
+        <p id="solution-help" class="solution-intro"></p>
+      </div>
+    </section>
+    <div class="sidebar-footer"><span id="model-note">3D · VITESSE CONSTANTE</span><p>Cylindre de séparation : distance horizontale ET écart d'altitude.</p></div>
+  </aside>
+  <section class="main-panel">
+    <div class="view-toolbar">
+      <div class="view-title"><span class="brand-mark" aria-hidden="true">↗</span><h2>Vector+</h2><span class="live-tag" id="run-status">PAUSE</span></div>
+      <div class="view-controls">
+        <label>Horizon<select id="horizon"><option value="5">5 min</option><option value="10" selected>10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></label>
+        <label>Sép. horiz.<select id="separation"><option value="3">3 NM</option><option value="5">5 NM</option><option value="7" selected>7 NM</option><option value="10">10 NM</option></select></label>
+        <label>Sép. vert.<select id="sepv"><option value="0">ignorée</option><option value="500">500 ft</option><option value="1000" selected>1 000 ft</option><option value="2000">2 000 ft</option></select></label>
+        <label>Vue<select id="view"><option value="2d" selected>2D</option><option value="3d">3D</option></select></label>
+        <label>Axe vertical<select id="axis" disabled><option value="alt" selected>Altitude</option><option value="time">Temps</option><option value="relief">Relief densité</option></select></label>
+      </div>
+    </div>
+    <section class="density-toolbar" aria-label="Fond de carte">
+      <div class="density-title"><label class="bg-label">Fond de carte<select id="background"><option value="density" selected>Densité exacte</option><option value="heat">HeatMap de l'AG</option><option value="none">Aucun</option></select></label></div>
+      <div id="density-controls" class="density-controls">
+        <label>Carte<select id="density-channel"><option value="blend" selected>Combinée</option><option value="positive">Sûr seulement</option><option value="negative">Conflit seulement</option></select></label>
+        <label>Avion<select id="density-scope"><option value="all" selected>Tous</option></select></label>
+        <label title="Largeur du lissage gaussien (σ), en milles nautiques">Lissage<select id="density-kernel"><option value="0">Aucun</option><option value="0.75">0,75 NM</option><option value="1.5" selected>1,5 NM</option><option value="3">3 NM</option></select></label>
+        <label>Grille<select id="density-grid"><option value="80x60">80 × 60</option><option value="160x120" selected>160 × 120</option><option value="240x180">240 × 180</option><option value="400x400">400 × 400</option></select></label>
+        <label>Couleurs<select id="density-scale"><option value="log" selected>Log</option><option value="linear">Linéaire</option></select></label>
+        <label>Dégradé<select id="density-palette"><option value="classic" selected>Menthe / Corail</option><option value="blueAmber">Bleu / Ambre</option><option value="cyanMagenta">Cyan / Magenta</option><option value="limeViolet">Lime / Violet</option><option value="iceFire">Glace / Feu</option></select></label>
+        <label>Luminosité<select id="density-luminosity"><option value="0">Aucune</option><option value="0.45">Douce</option><option value="0.8" selected>Détaillée</option></select></label>
+        <label>Relief<select id="density-relief"><option value="0">Plat</option><option value="1">1×</option><option value="2">2×</option><option value="4" selected>4×</option><option value="8">8×</option><option value="12">12×</option></select></label>
+        <label>Brillance<select id="density-specular"><option value="0">Aucune</option><option value="0.35">Douce</option><option value="0.8" selected>Forte</option></select></label>
+      </div>
+      <p id="density-status" class="density-status" role="alert" hidden></p>
+    </section>
+    <div class="layer-row" aria-label="Couches affichées">
+      <span>Couches</span>
+      <label><input type="checkbox" data-layer="routes" checked> Routes d'origine</label>
+      <label><input type="checkbox" data-layer="solution" checked> Solution</label>
+      <label><input type="checkbox" data-layer="aircraft" checked> Avions + vecteurs</label>
+      <label><input type="checkbox" data-layer="zones" checked> Zones de séparation</label>
+    </div>
+    <div class="radar-wrap" id="radar-wrap">
+      <div class="radar-top"><span><i class="status-dot"></i> <span id="plan-label">VUE EN PLAN</span> <span class="dim">/ 120 × 90 NM</span></span><span id="radar-mode">GLISSER POUR MODIFIER</span></div>
+      <svg id="radar" viewBox="0 0 1200 900" role="group" aria-label="Radar interactif. Sélectionner un avion et utiliser les flèches du clavier pour le déplacer ; glisser sa poignée pour changer sa vitesse.">
+        <defs><pattern id="small-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1b2d3c" stroke-width="0.8"></path></pattern><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#small-grid)"></rect><path d="M100 0H0V100" fill="none" stroke="#2a3e4d" stroke-width="1"></path></pattern><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="context-stroke" stroke-width="1.5"></path></marker></defs>
+        <rect width="1200" height="900" fill="url(#grid)"></rect>
+        <g class="radar-rings"><circle cx="600" cy="450" r="150"></circle><circle cx="600" cy="450" r="300"></circle><circle cx="600" cy="450" r="450"></circle><path d="M580 450h40M600 430v40"></path></g>
+        <image id="heat-image" x="0" y="0" width="1200" height="900" preserveAspectRatio="none" style="image-rendering:pixelated;pointer-events:none"></image>
+        <image id="density-image" x="0" y="0" width="1200" height="900" preserveAspectRatio="none" style="image-rendering:pixelated;pointer-events:none"></image>
+        <g id="solution-overlay"></g><g id="paths"></g><g id="crossings"></g><g id="aircraft"></g>
+      </svg>
+      <canvas id="view3d" hidden></canvas>
+      <div class="compass" id="compass"><span>N</span><b>↑</b></div>
+      <div class="radar-bottom"><div class="legend"><span><i class="legend-line"></i> Projection</span><span><i class="legend-cross">◇</i> Croisement</span><span><i class="legend-risk"></i> Approche dangereuse</span></div><div class="scale" id="scale">10 NM<span></span></div></div>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    </div>
+    <div class="transport"><button id="play" class="button play-button">▶ <span>Lecture</span></button><button id="reset" class="icon-button reset" title="Revenir au début" aria-label="Revenir au début">↺</button><span id="elapsed" class="time">00:00</span><input id="timeline" type="range" min="0" max="10" value="0" step="0.01" aria-label="Temps de simulation"><span id="duration" class="duration">10:00</span><select id="rate" aria-label="Vitesse de lecture"><option value="10">10×</option><option value="30" selected>30×</option><option value="60">60×</option></select></div>
+    <details class="analysis-panel" id="panel-encounters" open><summary class="analysis-header"><div><h2>Analyse des rencontres <span id="encounter-count" class="badge">0</span></h2><p>Prévisions depuis l'instant courant · <span id="prediction-label"></span></p></div><div class="summary"><span id="risk-count">0</span> approches dangereuses</div></summary><div id="encounters" class="encounters"></div></details>
+    <details class="analysis-panel" id="panel-solution" open><summary class="analysis-header"><div><h2>Solution et consignes</h2><p id="solution-summary-line">Aucune solution affichée</p></div></summary><div id="solution-body" class="panel-body"></div></details>
+    <details class="analysis-panel" id="panel-manual"><summary class="analysis-header"><div><h2>À toi de jouer : modifier les manœuvres</h2><p>Cap, niveau, instants : la vue et les analyses se mettent à jour</p></div></summary><div id="manual-body" class="panel-body"></div></details>
+    <details class="analysis-panel" id="panel-charts"><summary class="analysis-header"><div><h2>Courbes</h2><p>Évolution de l'algorithme · séparation dans le temps</p></div></summary><div class="panel-body charts"><div><h3>Évolution de l'algorithme</h3><canvas id="chart-ga" height="220"></canvas></div><div><h3>Séparation horizontale (NM)</h3><canvas id="chart-h" height="220"></canvas></div><div><h3>Écart d'altitude (ft)</h3><canvas id="chart-v" height="220"></canvas></div></div></details>
+  </section>
+</main>
+<script>{{DATA}}</script>
+{{SCRIPTS}}
+</body></html>

@@ -46,22 +46,29 @@ corrèle à 0,99-0,9999 avec celle du GA original (écart médian 0-0,2 NM). Mon
 **Écarts.** Les paramètres du GA original (taille, taux, fitness exacte) ne sont pas publiés : choix raisonnables ici. Les valeurs de fitness ne sont donc pas
 comparables à celles de l'ENAC. L'étude utilisateurs (21 contrôleurs, EEG) n'est pas reproduite, seules les deux interfaces le sont.
 
-## Studio unique : GA + outil Vector (ENAC) + altitude, en 2D ou en 3D
-Intègre « Vector — Aircraft crossing studio » (page enregistrée de https://recherche.enac.fr/~hurter/NextQCM/, copie intacte dans `vendor/nextqcm/`).
-Analyse détaillée : [`docs/NEXTQCM_ANALYSIS.md`](docs/NEXTQCM_ANALYSIS.md). L'onglet 6 de l'app est **un seul outil** :
+## Vector+ : l'outil de l'ENAC étendu (altitude, algorithme génétique, HeatMap, 2D / 3D)
+Le code de « Vector — Aircraft crossing studio » (C. Hurter, ENAC ; page enregistrée de https://recherche.enac.fr/~hurter/NextQCM/, copie **intacte** dans `vendor/nextqcm/`)
+a été **extrait et étendu** : il devient la base de notre outil (`src/artimation/web/`). Analyse détaillée : [`docs/NEXTQCM_ANALYSIS.md`](docs/NEXTQCM_ANALYSIS.md).
+C'est une page HTML autonome (onglet 6 de l'app, ou fichier téléchargeable qui marche hors ligne).
 
-- **Une situation commune** : un scénario réel ARTIMATION (niveaux de vol éditables) ou des avions libres (tableau éditable).
-- **Une fenêtre de vue** qui bascule 2D / 3D avec **les mêmes couches** : fond (HeatMap de l'AG | densité exacte Vector | aucun), routes d'origine, solution,
-  avions + vecteurs vitesse à l'instant t, zones de séparation (cercles en 2D, cylindres en 3D). Axe vertical 3D : altitude, temps, ou relief de densité.
-- **Des panneaux communs** : rencontres, caps sûrs, « à toi de jouer » (modifier la solution), évolution de l'AG, séparation dans le temps, consignes.
-- **Modèle étendu à l'altitude** : conflit = < 7 NM ET < 1 000 ft (cylindre) ; l'AG peut changer de niveau (±1 000/2 000 ft à 1 500 ft/min). Au même niveau, on
-  retrouve exactement le modèle 2D d'origine (distance « équivalente » = max(horizontale, verticale × sep/sep_v)).
-- **Portage Python** (`vector.py`) de l'espace des caps sûrs et de la densité, validé cellule par cellule contre le JS d'origine (`tests/test_vector.py`, nécessite `node`),
-  puis étendu à l'altitude (`*_3d`).
-- L'outil d'origine (glisser-déposer, 2D) reste disponible dans un volet, chargé avec la situation courante ; il est isolé du reste (iframe).
+**Fonctions de l'outil d'origine, conservées** : placer des avions (clic), glisser, orienter le vecteur (poignée), flèches du clavier, générer N avions,
+Lecture / pause / chronologie / vitesse de lecture, horizon et séparation, analyse des rencontres (focus), caps sûrs (plages, secteurs cliquables),
+carte de densité (canal, avion, lissage, grille, échelle, dégradé, luminosité, relief, brillance).
 
-**Limites.** Le rendu 3D (WebGL) n'a pas pu être vérifié visuellement dans l'environnement de développement (pas de WebGL en navigateur sans interface) :
-la géométrie est testée (`tests/test_studio_view.py`) mais pas l'apparence. Les vols des scénarios ENAC sont tous au FL360 (recoupés avec `exo_artimation.txt`) : l'altitude
-y est un paramètre à explorer, pas une donnée du papier. Le changement de niveau et le coût associé dans la fitness sont des choix de modélisation, pas ceux du papier.
+**Ajouts** :
+- **Altitude** : niveau et taux vertical par avion ; conflit = < 7 NM ET < 1 000 ft (cylindre) ; au même niveau, le modèle 2D d'origine est un cas particulier.
+- **Algorithme génétique** (Hurter et al. 2022) dans le navigateur (≈ 0,5 s) : cap et changement de niveau, solution BlackBox ou HeatMap des solutions explorées, consignes,
+  « à toi de jouer » (modifier les manœuvres), courbes (évolution, séparation horizontale et verticale).
+- **Dix scénarios réels** d'ARTIMATION (FL360, recoupés avec `exo_artimation.txt`) et la solution de l'algorithme original de l'ENAC si elle est téléchargée.
+- **Une fenêtre, 2D ou 3D** : mêmes couches (fond, routes, solution, avions + vecteurs, zones de séparation) ; seule la projection change. 3D : altitude, temps ou relief.
+  On peut placer, glisser et orienter les avions aussi en 3D, tourner (glisser) et zoomer (molette).
 
-Sur macOS, `python` n'existe pas : utilise `python3` ou `.venv/bin/python`.
+**Vérification** (`python3 -m pytest`, ~90 s ; nécessite `node` et, pour l'interface, Selenium + Firefox) :
+- le JS étendu redonne **exactement** les résultats du JS d'origine quand l'altitude est ignorée (`tests/test_web_physics.py`) ;
+- le moteur de conflit et le GA en JS == le Python, lui-même validé contre les solutions de l'ENAC (`tests/test_web_model.py`) ;
+- l'interface réelle (Play, placer/glisser/orienter en 2D et en 3D, GA, altitude, panneaux) est pilotée dans Firefox (`tests/test_web_ui.py`).
+
+**Limites.** Les paramètres exacts du GA de l'ENAC ne sont pas publiés (valeurs raisonnables ici). Les vols des scénarios sont tous au FL360 : l'altitude est un paramètre à explorer.
+Le coût d'un changement de niveau dans la fitness et la vitesse verticale de 1 500 ft/min sont des choix de modélisation. Le code de Christophe n'a pas de licence affichée : à lui demander avant de partager le dépôt.
+
+Sur macOS, `python` n'existe pas : utilise `python3` ou `.venv/bin/python`. Si l'app est déjà lancée, la relancer après une mise à jour (Streamlit ne recharge pas `src/`).

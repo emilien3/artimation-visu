@@ -28,16 +28,20 @@ On place jusqu'à 100 avions dans une zone de 120 × 90 NM, on règle vitesse et
   des caps sûrs pour un virage simple. Les deux répondent à « où l'avion peut-il passer sans conflit ? ».
 - Les scénarios ARTIMATION (positions, vitesses, caps à l'instant t) se convertissent en avions Vector : `studio.aircraft_at`.
 
-## Intégration réalisée
-- `src/artimation/vector.py` : **portage Python** de `physics.js` + `density.js`, validé contre le JS d'origine exécuté sous node
-  (`tests/test_vector.py` : 100 % des cellules d'une grille 160 × 120 identiques, mêmes intervalles de caps), puis **étendu à l'altitude**
-  (`encounter3d`, `heading_space3d`, `density_maps3d` : conflit = cylindre NM × ft ; au même niveau on retrouve le 2D).
-- `src/artimation/studio_ui.py` + `studio_view.py` : **un seul outil**. Les onglets « GA » et « Vector » ont été fusionnés : même situation, mêmes réglages, mêmes panneaux ;
-  seule la fenêtre de vue change entre 2D et 3D.
-- `src/artimation/studio.py` : outil d'origine reconstruit en mémoire (CSS/JS en ligne) avec un hook `VectorStudio.load()`, gardé comme volet de référence (iframe isolée :
-  ses modifications ne remontent pas dans le studio, d'où la fusion par réimplémentation plutôt que par intégration de l'iframe).
-- Perdu dans la fusion : le glisser-déposer des avions sur la carte (remplacé par un tableau éditable). Récupérable avec un composant Streamlit bidirectionnel si besoin.
+## Intégration réalisée : extraction du code, outil unique
+Le code d'origine (copie intacte dans `vendor/nextqcm/`) a été **extrait** dans `src/artimation/web/` et étendu :
+
+| Fichier | Rôle |
+|---|---|
+| `physics.js`, `density.js`, `density-view.js` | Code d'origine + altitude (`verticalWindow`, paramètre `sepV`) ; redonne **exactement** les résultats d'origine quand l'altitude est ignorée. |
+| `model.js` | Routes, manœuvres (cap + niveau), cylindre de séparation, évaluation : portage de `conflict.py`. |
+| `ga.js` | Algorithme génétique et HeatMap des solutions explorées. |
+| `view3d.js` | Vue 3D (Canvas, orbite, zoom, sélection/déplacement dans un plan horizontal) : mêmes couches que la 2D. |
+| `app.js`, `index.html`, `charts.js`, `extra.css` | Application : interactions d'origine (placer, glisser, orienter, Lecture…) + scénarios, GA, panneaux, 2D/3D. |
+
+Pourquoi un outil JavaScript et pas des widgets Streamlit : placer/glisser des avions et la lecture temporelle doivent tourner côté navigateur. Le même code sert
+dans l'app (iframe) et en fichier autonome. Le Python (`conflict.py`, `ga.py`, `vector.py`) est conservé comme **référence validée** : les tests comparent le JS au Python et au JS d'origine.
 
 ## Limites connues
-- Le rendu 3D n'a pas pu être contrôlé visuellement (pas de WebGL dans l'environnement de test) ; la géométrie des figures est testée.
-- Les vols des scénarios ENAC sont au FL360 (recoupés avec `exo_artimation.txt`) ; l'altitude est donc un paramètre d'exploration.
+- L'altitude des scénarios ENAC est constante (FL360, recoupée avec `exo_artimation.txt`) : c'est un paramètre d'exploration.
+- Les paramètres du GA de l'ENAC ne sont pas publiés ; fitness et coût des changements de niveau sont des choix de modélisation.

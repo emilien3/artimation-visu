@@ -7,3 +7,4 @@ lime
 streamlit
 plotly
 pytest
+selenium

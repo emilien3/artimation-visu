@@ -13,7 +13,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from artimation.data import DESCRIPTIONS, FEATURE_GROUP, FEATURES  # noqa: E402
-from artimation import studio_ui  # noqa: E402
+from artimation.webapp import build_html  # noqa: E402
 from artimation.experiment import ARTIFACTS, load, run, save  # noqa: E402
 
 st.set_page_config(page_title="ARTIMATION · XAI retard au décollage", layout="wide")
@@ -209,5 +209,15 @@ with tab4:
 
 
 # ----------------------------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def _studio_page():
+    return build_html()
+
+
 with tab5:
-    studio_ui.render()
+    st.markdown(
+        "**Vector+** : l'outil de l'ENAC (C. Hurter), étendu à l'altitude, avec l'algorithme génétique de Hurter et al. 2022, la HeatMap, et une vue 3D. "
+        "Une seule situation, une seule fenêtre : **2D ou 3D**. Placer des avions (clic), les glisser, orienter leur vecteur, **Lecture**, lancer l'algorithme."
+    )
+    st.iframe(_studio_page(), height=1500)
+    st.download_button("Télécharger l'outil (page HTML autonome, fonctionne hors ligne)", _studio_page(), file_name="vector-plus.html", mime="text/html")

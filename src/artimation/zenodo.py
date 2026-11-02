@@ -52,3 +52,13 @@ def load_run(scn, k):
 
 def pair_dmin(scn, genes):
     return np.array([evaluate(scn, g).pair_dmin for g in genes])
+
+
+def best_solution(k):
+    """Meilleure solution du GA original de l'ENAC pour le scénario k (dernière génération de `sol{k}-1.csv`), (A, 3), ou None si non téléchargée."""
+    path = ZEN_DIR / f"sol{k}-1.csv"
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, usecols=["i", "t1", "t2", "alpha"])
+    a = int(df["i"].max()) + 1
+    return df[["t1", "t2", "alpha"]].to_numpy(float).reshape(-1, a, 3)[-1]
