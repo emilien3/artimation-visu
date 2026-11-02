@@ -32,7 +32,7 @@ def get_results():
     path = ARTIFACTS / "results.pkl"
     if path.exists():
         res = load()
-        if "discretize_lime" in res.get("config", {}):
+        if "discretize_lime" in res.get("config", {}) and hasattr(res.get("cbr"), "cases_"):
             return res
     res = run(verbose=False)
     save(res)
@@ -216,15 +216,17 @@ with tab4:
             "Le gain total reflète la vraie part de variance expliquée par chaque variable et aligne les classements "
             "du CBR, de SHAP et de LIME en **Table 3**.\n"
             "2. **Asymétrie SHAP vs LIME en Table 3** : LIME ajuste une régression linéaire locale sur un noyau large "
-            "($\\sigma = 0{,}75\\sqrt{d}$), dont les pentes suivent la hiérarchie globale moyenne (**LIME > SHAP sur "
-            "Global CBR**). À l'inverse, SHAP attribue une contribution proportionnelle à l'écart de chaque variable "
-            "sur le vol considéré, ce qui l'aligne avec $\\gamma_i x_{ij} w_j$ (**SHAP > LIME sur Additive CBR**).\n"
-            "3. **Courbure non linéaire en Table 2** : lorsque plusieurs facteurs de retard se cumulent, l'amplification "
-            "non linéaire écarte l'approximation linéaire locale de LIME de plusieurs minutes (`All` > `100k` > `67k`), "
-            "tandis que SHAP reste exact ($\\sim 10^{-5}$ min).\n"
+            "($\\sigma = 0{,}75\\sqrt{d}$), dont les pentes suivent la hiérarchie globale moyenne (**Global CBR > "
+            "Additive CBR pour LIME**). À l'inverse, SHAP attribue une contribution proportionnelle à l'écart de chaque "
+            "variable sur le vol considéré, ce qui l'aligne avec $\\gamma_i x_{ij} w_j$ (**Additive CBR > Global CBR "
+            "pour SHAP**).\n"
+            "3. **Réponse non monotone en Table 2** : chaque variable motrice suit un régime centré à 3 états "
+            "(repos, absorption de marge, congestion active) combiné à une interaction d'ordre 8, ce qui écarte "
+            "l'approximation linéaire locale de LIME de plusieurs minutes tandis que SHAP reste exact "
+            "($\\sim 10^{-5}$ min).\n"
             "4. **Écart résiduel avec les chiffres exacts du papier** : les vraies données EUROCONTROL ETFMS 2019 "
             "(5,9 M de vols, 158 147 vols expliqués avec KernelSHAP) sont privées ; notre générateur synthétique "
-            "(`data.py`) en reproduit la structure par cas opérationnels à l'échelle de 80 000 vols."
+            "(`data.py`) en reproduit l'ordre des résultats par cas opérationnels à l'échelle de 80 000 vols."
         )
 
 

@@ -28,6 +28,6 @@ pas: ###
 - [x] Mettre à jour `src/artimation/experiment.py` pour construire les sous-ensembles `All / 100k / 67k`.
 
 ### Task 4: Tester le pipeline complet et mettre à jour app.py
-- [ ] Vérifier dans `tests/test_core.py` que le CBR bat XGBoost sur les cas récurrents et que `run()` produit les Tables 1 à 3.
-- [ ] Mettre à jour l'onglet 5 dans `app.py`, `README.md` et régénérer `artifacts/results.pkl`.
-- [ ] Vérifier que les 57 tests (`pytest`) passent sans régression.
+- [x] Vérifier dans `tests/test_core.py` que le CBR bat XGBoost sur les cas récurrents et que `run()` produit les Tables 1 à 3.
+- [x] Mettre à jour l'onglet 5 dans `app.py`, `README.md` et régénérer `artifacts/results.pkl`.
+- [x] Vérifier que les 57 tests (`pytest`) passent sans régression.

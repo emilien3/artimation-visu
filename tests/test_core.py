@@ -47,10 +47,10 @@ def test_cbr_k3_average_and_beats_xgb_on_recurring_cases(setup):
     _, idx = cbr.neighbors(Xte[:5])
     assert idx.shape == (5, 3)
     np.testing.assert_allclose(cbr.predict(Xte[:5]), ytr[idx].mean(1))
-    # un cas déjà connu est son propre voisin le plus proche
+    # A known training case is its own nearest neighbor (up to duplicates at distance 0).
     d, i = cbr.neighbors(Xtr[:3])
     assert (i[:, 0] == np.arange(3)).all() or (d[:, 0] < 1e-9).all()
-    # Sur les situations opérationnelles récurrentes, le CBR (k=3) bat XGBoost comme dans la Table 1 du papier
+    # On recurring operational cases, CBR (k=3) beats XGBoost as in Table 1 of the paper.
     mae_cbr = np.abs(yte - cbr.predict(Xte)).mean()
     mae_xgb = np.abs(yte - xgb.predict(Xte)).mean()
     assert mae_cbr < mae_xgb
@@ -230,10 +230,14 @@ def test_experiment_run_tables_structure(exp):
     assert set(masks) == {"All", "100k", "67k"}
     assert masks["All"].sum() == 100 and masks["100k"].sum() == round(100 * SUBSETS["100k"]) and masks["67k"].sum() == round(100 * SUBSETS["67k"])
     for sub in ("All", "100k", "67k"):
-        assert sub in exp["table1"]["CBR"] and sub in exp["table1"]["XGB"]
-        assert sub in exp["table2"]["SHAP"] and sub in exp["table2"]["LIME"]
-        assert 0.0 <= exp["table3"]["SHAP"]["Global CBR"][sub] <= 1.0
-        assert 0.0 <= exp["table3"]["LIME"]["Additive CBR"][sub] <= 1.0
+        for m in ("CBR", "XGB"):
+            mae, std = exp["table1"][m][sub]
+            assert np.isfinite(mae) and np.isfinite(std) and mae >= 0.0 and std >= 0.0
+        for m in ("SHAP", "LIME"):
+            mae, std = exp["table2"][m][sub]
+            assert np.isfinite(mae) and np.isfinite(std) and mae >= 0.0 and std >= 0.0
+            for ref in ("Global CBR", "Additive CBR"):
+                assert 0.0 <= exp["table3"][m][ref][sub] <= 1.0
 
 
 def test_table1_cbr_beats_xgb_on_recurring_cases(exp):

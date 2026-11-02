@@ -15,7 +15,7 @@ travail de l'équipe qui coordonne le projet SESAR [ARTIMATION](https://www.sesa
 
 ## Écarts avec le papier (à connaître)
 - **Données synthétiques.** Les données EUROCONTROL/ETFMS 2019 (5,9 M de vols) sont privées. `data.py` génère 42 variables de même nature (vol, vol précédent, régulation ATFM, météo, aéroports) structurées autour de situations opérationnelles récurrentes.
-- **Hiérarchie des modèles et des explications.** Comme dans l'article, le CBR ($k=3$) bat XGBoost sur les situations opérationnelles récurrentes (Table 1), SHAP vérifie la précision locale (~1e-6 min) tandis que LIME (discrétisé par quartiles dans $z' \in \{0,1\}^d$) s'écarte de plusieurs minutes (Table 2), et LIME s'accorde davantage avec le CBR Global alors que SHAP est plus proche du CBR Additif (Table 3). Les valeurs numériques exactes diffèrent de celles du jeu privé EUROCONTROL.
+- **Hiérarchie des modèles et des explications.** Comme dans l'article, le CBR ($k=3$) bat XGBoost sur les situations opérationnelles récurrentes (Table 1), SHAP vérifie la précision locale (~1e-5 min) tandis que LIME s'écarte de plusieurs minutes (Table 2), et LIME s'accorde davantage avec le CBR Global alors que SHAP est plus proche du CBR Additif (Table 3). Les valeurs numériques exactes diffèrent de celles du jeu privé EUROCONTROL.
 - **TreeSHAP** (exact, par défaut) et **KernelSHAP** (`--shap-method kernel`) ; 500 vols expliqués par défaut au lieu de 158 147.
 - Les sous-ensembles « 100k » / « 67k » reprennent les mêmes proportions (63,6 % / 42,7 % des instances les plus précises).
 
