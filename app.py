@@ -17,6 +17,9 @@ from artimation import zenodo  # noqa: E402
 from artimation.conflict import SEP_NM, evaluate, heat_layers, instructions, list_scenarios, maneuver_path, separation_curves  # noqa: E402
 from artimation.experiment import ARTIFACTS, load, run, save  # noqa: E402
 from artimation.ga import GAConfig, run_ga  # noqa: E402
+from artimation.studio import aircraft_at, build_html, scenario_frame  # noqa: E402
+from artimation.vector import density_maps, velocity  # noqa: E402
+from artimation.viz3d import density_relief_figure, spacetime_figure  # noqa: E402
 
 st.set_page_config(page_title="ARTIMATION · XAI retard au décollage", layout="wide")
 
@@ -43,7 +46,7 @@ test, train = R["test"], R["train"]
 st.title("Pourquoi l'IA prédit-elle ce retard ?")
 st.caption("Réimplémentation de « When a CBR in Hand is Better than Twins in the Bush » (Ahmed et al., XCBR'22) · projet SESAR ARTIMATION · données synthétiques")
 
-tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(["1 · Comprendre", "2 · Prédire", "3 · Expliquer un vol", "4 · Poids globaux", "5 · SHAP vs LIME", "6 · Conflits : algorithme génétique"])
+tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["1 · Comprendre", "2 · Prédire", "3 · Expliquer un vol", "4 · Poids globaux", "5 · SHAP vs LIME", "6 · Conflits : algorithme génétique", "7 · Outil Vector (ENAC)"])
 
 # ----------------------------------------------------------------------------------------------
 with tab0:
@@ -253,6 +256,31 @@ def map_layout(fig, scn, title):
     return fig
 
 
+@st.cache_data
+def vector_density(name, t, sep, horizon, ids=None):
+    ac = aircraft_at(SCENARIOS[name], t)
+    return ac, density_maps(ac, horizon, sep, ids=ids)
+
+
+def vector_heatmap(dens, aircraft, title):
+    sig = np.where((dens["positive"] == 0) & (dens["negative"] == 0), np.nan, dens["signed"])
+    pos, neg = dens["positive"].max() or 1, dens["negative"].max() or 1
+    z = np.where(sig < 0, sig / neg, sig / pos)
+    xs = (np.arange(dens["cols"]) + 0.5) * dens["width"] / dens["cols"]
+    ys = (np.arange(dens["rows"]) + 0.5) * dens["height"] / dens["rows"]
+    fig = go.Figure(go.Heatmap(x=xs, y=ys, z=z, zmin=-1, zmax=1, zmid=0, showscale=False, hoverinfo="skip",
+                               colorscale=[[0, "rgb(255,55,65)"], [0.35, "rgb(255,166,129)"], [0.5, "rgb(54,54,54)"], [0.65, "rgb(47,146,120)"], [1, "rgb(47,245,210)"]]))
+    for a in aircraft:
+        v = velocity(a)
+        fig.add_annotation(x=a.x + v[0] * 3, y=a.y + v[1] * 3, ax=a.x, ay=a.y, xref="x", yref="y", axref="x", ayref="y",
+                           showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#ffcb78")
+        fig.add_trace(go.Scatter(x=[a.x], y=[a.y], mode="markers+text", text=[a.id], textposition="top right",
+                                 marker=dict(size=9, color="#ffcb78"), showlegend=False))
+    fig.update_layout(title=title, height=520, margin=dict(l=0, r=0, t=40, b=0), xaxis=dict(range=[0, dens["width"]], title="x (NM)"),
+                      yaxis=dict(range=[dens["height"], 0], scaleanchor="x", title="y (NM, vers le bas)"))
+    return fig
+
+
 with tab5:
     st.header("Résoudre un conflit aérien avec un algorithme génétique")
     st.markdown(
@@ -292,27 +320,53 @@ Il comprend la marge de manœuvre, et peut en choisir une autre. Dans l'étude s
     m[2].metric("Séparation minimale retenue", f"{ev.dmin:.1f} NM", f"seuil {SEP_NM:.0f} NM", delta_color="off")
     m[3].metric("Longueur ajoutée", f"{ev.extra_nm:.1f} NM")
 
-    left, right = st.columns(2)
-    fig_b = go.Figure(route_traces(scn, best))
-    left.plotly_chart(map_layout(fig_b, scn, "BlackBox : seulement la solution proposée"), width='stretch')
-    which = right.radio("Avion à analyser", ["Tous"] + [f"Avion {i + 1}" for i in range(scn.n)], horizontal=True)
     H = heat(name, f"{src}|{seed}", genes_all, pd_all)
-    lo = H["lo"]
-    xs, ys = lo[0] + H["cell"] * (np.arange(H["safe"].shape[2]) + 0.5), lo[1] + H["cell"] * (np.arange(H["safe"].shape[1]) + 0.5)
-    sel = slice(None) if which == "Tous" else slice(int(which[-1]) - 1, int(which[-1]))
-    layers = []
-    for key, rgb in (("unsafe", "214,39,40"), ("safe", "44,160,44")):
-        z = np.log1p(H[key][sel].sum(0))
-        layers.append(go.Heatmap(x=xs, y=ys, z=np.where(z > 0, z, np.nan), showscale=False, hoverinfo="skip",
-                                 colorscale=[[0, f"rgba({rgb},0.15)"], [1, f"rgba({rgb},0.9)"]]))
-    fig_h = go.Figure(layers + route_traces(scn, best))
-    right.plotly_chart(map_layout(fig_h, scn, "HeatMap : vert = modifications sûres, rouge = dangereuses"), width='stretch')
-    st.caption("Chaque case colorée = endroit où au moins un candidat est passé (échelle logarithmique). "
-               "Plus c'est opaque, plus l'algorithme y est passé. La solution retenue est la ligne épaisse.")
+
+    def heat_traces(sel):
+        """Couches HeatMap vert/rouge (échelle log) pour les avions `sel`."""
+        lo = H["lo"]
+        xs, ys = lo[0] + H["cell"] * (np.arange(H["safe"].shape[2]) + 0.5), lo[1] + H["cell"] * (np.arange(H["safe"].shape[1]) + 0.5)
+        out = []
+        for key, rgb in (("unsafe", "214,39,40"), ("safe", "44,160,44")):
+            z = np.log1p(H[key][sel].sum(0))
+            out.append(go.Heatmap(x=xs, y=ys, z=np.where(z > 0, z, np.nan), showscale=False, hoverinfo="skip",
+                                  colorscale=[[0, f"rgba({rgb},0.15)"], [1, f"rgba({rgb},0.9)"]]))
+        return out
+
+    layers = heat_traces(slice(None))
+    view = st.radio("Vue", ["2D", "3D"], horizontal=True, key="view3d",
+                    help="3D : espace-temps (x, y, t). Un conflit se voit comme deux trajectoires qui se rapprochent à la même hauteur.")
+    if view == "3D":
+        st.plotly_chart(spacetime_figure(scn, best, genes_all, pd_all, sep=SEP_NM), width='stretch')
+        st.caption("Axe vertical = temps. Gris pointillé : routes d'origine. Lignes épaisses : la solution retenue. "
+                   "Lignes fines : un échantillon des candidats explorés, verts s'ils respectent 7 NM, rouges sinon.")
+    else:
+        left, right = st.columns(2)
+        fig_b = go.Figure(route_traces(scn, best))
+        left.plotly_chart(map_layout(fig_b, scn, "BlackBox : seulement la solution proposée"), width='stretch')
+        which = right.radio("Avion à analyser", ["Tous"] + [f"Avion {i + 1}" for i in range(scn.n)], horizontal=True)
+        sel = slice(None) if which == "Tous" else slice(int(which[-1]) - 1, int(which[-1]))
+        layers = heat_traces(sel)
+        fig_h = go.Figure(layers + route_traces(scn, best))
+        right.plotly_chart(map_layout(fig_h, scn, "HeatMap : vert = modifications sûres, rouge = dangereuses"), width='stretch')
+        st.caption("Chaque case colorée = endroit où au moins un candidat est passé (échelle logarithmique). "
+                   "Plus c'est opaque, plus l'algorithme y est passé. La solution retenue est la ligne épaisse.")
 
     st.subheader("Consignes données au contrôleur")
     for line in instructions(scn, best):
         st.markdown(f"- {line}")
+
+    with st.expander("Comparer avec la carte analytique exacte de l'outil Vector (ENAC)"):
+        st.markdown("La HeatMap du GA est une **exploration stochastique** de manœuvres. L'outil Vector calcule, lui, **exactement** pour chaque cap "
+                    "s'il est sûr (autres avions en route directe, virage instantané) : c'est la carte que le GA approche, pour des virages simples.")
+        tmax = int(min(r.t[-1] for r in scn.routes))
+        tt = st.slider("Instant (s)", 0, tmax, 0, 10, key=f"vt{name}")
+        hz = st.select_slider("Horizon (min)", [5, 10, 15, 30], 10, key=f"vh{name}")
+        ac_v, dens_v = vector_density(name, float(tt), SEP_NM, float(hz))
+        if view == "3D":
+            st.plotly_chart(density_relief_figure(dens_v, ac_v, f"· t = {tt} s · horizon {hz} min"), width='stretch')
+        else:
+            st.plotly_chart(vector_heatmap(dens_v, ac_v, f"Densité exacte à t = {tt} s (menthe = cap sûr, corail = conflit)"), width='stretch')
 
     a, b = st.columns(2)
     gens = pd.DataFrame({"génération": gen_all, "fitness": fit_all, "sûr": dmin_all >= SEP_NM})
@@ -343,3 +397,34 @@ Il comprend la marge de manœuvre, et peut en choisir une autre. Dans l'étude s
     fig_m = go.Figure(layers + route_traces(scn, mine))
     st.plotly_chart(map_layout(fig_m, scn, "Ta solution sur la HeatMap"), width='stretch')
     st.caption("SHAP, LIME et le CBR (onglets 2 à 5) expliquent un modèle prédictif ; ici, l'algorithme génétique est transparent par exploration : on montre tout l'espace qu'il a parcouru.")
+
+
+# ----------------------------------------------------------------------------------------------
+with tab6:
+    st.header("L'outil Vector de l'ENAC, intégré")
+    st.markdown(
+        """
+**Vector — Aircraft crossing studio** est l'outil hors ligne de Christophe Hurter (ENAC) : on place des avions, on règle leur vecteur vitesse,
+et il calcule les croisements, les approches minimales, **l'espace des caps sûrs** et une **carte de densité** de ces caps (menthe = sûr, corail = conflit).
+Ci-dessous : l'outil **d'origine, intact**, dans lequel on charge un scénario réel d'ARTIMATION. Glisse les avions, change les caps, active « Safe directions ».
+        """
+    )
+    c1, c2, c3, c4 = st.columns(4)
+    nm7 = c1.selectbox("Scénario ARTIMATION", list(SCENARIOS), index=1, key="v7name")
+    tmax7 = int(min(r.t[-1] for r in SCENARIOS[nm7].routes))
+    t7 = c2.slider("Instant (s)", 0, tmax7, 0, 10, key="v7t")
+    sep7 = c3.selectbox("Séparation (NM)", [3, 5, 7, 10], index=2, key="v7sep")
+    view7 = c4.radio("Vue", ["2D (outil)", "3D (relief)"], key="v7view")
+    ac7 = aircraft_at(SCENARIOS[nm7], float(t7))
+    if not ac7:
+        st.warning("Plus aucun avion en vol à cet instant.")
+    elif view7 == "2D (outil)":
+        st.iframe(build_html(ac7, sep7), height=1280)
+        st.caption("Page de l'ENAC reconstruite en mémoire (CSS/JS inchangés, `vendor/nextqcm/`) + un hook `VectorStudio.load()` pour charger le scénario.")
+    else:
+        h7 = st.select_slider("Horizon (min)", [5, 10, 15, 30], 10, key="v7h")
+        which = st.selectbox("Carte de", ["Tous les avions"] + [a.id for a in ac7], key="v7which")
+        ac_v, dens_v = vector_density(nm7, float(t7), float(sep7), float(h7), None if which.startswith("Tous") else (which,))
+        st.plotly_chart(density_relief_figure(dens_v, ac_v, f"· {nm7} · t = {t7} s · horizon {h7} min"), width='stretch')
+        st.caption("Même calcul que l'outil (portage Python vérifié cellule par cellule contre le JS d'origine), rendu en relief : "
+                   "les sommets verts sont les caps sûrs les plus « larges », les creux rouges les zones de conflit.")

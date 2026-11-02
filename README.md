@@ -45,3 +45,12 @@ corrèle à 0,99-0,9999 avec celle du GA original (écart médian 0-0,2 NM). Mon
 
 **Écarts.** Les paramètres du GA original (taille, taux, fitness exacte) ne sont pas publiés : choix raisonnables ici. Les valeurs de fitness ne sont donc pas
 comparables à celles de l'ENAC. L'étude utilisateurs (21 contrôleurs, EEG) n'est pas reproduite, seules les deux interfaces le sont.
+
+## Outil Vector (ENAC) intégré + vue 3D
+Intègre « Vector — Aircraft crossing studio » (page enregistrée de https://recherche.enac.fr/~hurter/NextQCM/, copie intacte dans `vendor/nextqcm/`).
+Analyse détaillée : [`docs/NEXTQCM_ANALYSIS.md`](docs/NEXTQCM_ANALYSIS.md).
+
+- **Portage Python** (`vector.py`) de l'espace des caps sûrs et de la densité, validé cellule par cellule contre le JS d'origine (`tests/test_vector.py`, nécessite `node`).
+- **Outil d'origine embarqué** (onglet 7), avec un scénario ARTIMATION chargé via `studio.aircraft_at` (instant t réglable).
+- **Bouton Vue 3D** : espace-temps (x, y, t) des trajectoires et candidats du GA (onglet 6), relief 3D de la densité (onglets 6 et 7).
+- `python3 scripts/fetch_zenodo.py`, `python3 -m pytest`… (sur macOS, `python` n'existe pas : utilise `python3` ou `.venv/bin/python`).
