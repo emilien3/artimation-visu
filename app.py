@@ -13,7 +13,10 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from artimation.data import DESCRIPTIONS, FEATURE_GROUP, FEATURES  # noqa: E402
+from artimation import zenodo  # noqa: E402
+from artimation.conflict import SEP_NM, evaluate, heat_layers, instructions, list_scenarios, maneuver_path, separation_curves  # noqa: E402
 from artimation.experiment import ARTIFACTS, load, run, save  # noqa: E402
+from artimation.ga import GAConfig, run_ga  # noqa: E402
 
 st.set_page_config(page_title="ARTIMATION · XAI retard au décollage", layout="wide")
 
@@ -40,7 +43,7 @@ test, train = R["test"], R["train"]
 st.title("Pourquoi l'IA prédit-elle ce retard ?")
 st.caption("Réimplémentation de « When a CBR in Hand is Better than Twins in the Bush » (Ahmed et al., XCBR'22) · projet SESAR ARTIMATION · données synthétiques")
 
-tab0, tab1, tab2, tab3, tab4 = st.tabs(["1 · Comprendre", "2 · Prédire", "3 · Expliquer un vol", "4 · Poids globaux", "5 · SHAP vs LIME"])
+tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(["1 · Comprendre", "2 · Prédire", "3 · Expliquer un vol", "4 · Poids globaux", "5 · SHAP vs LIME", "6 · Conflits : algorithme génétique"])
 
 # ----------------------------------------------------------------------------------------------
 with tab0:
@@ -205,3 +208,138 @@ with tab4:
     st.caption("Table 3 · nDCG : accord de l'ordre des variables avec le CBR (référence)")
     st.dataframe(t3.round(2), hide_index=True, width='stretch')
     st.caption("SHAP est utilisé via TreeSHAP exact (le papier emploie KernelSHAP) ; 500 vols expliqués.")
+
+
+# ----------------------------------------------------------------------------------------------
+SCENARIOS = {sc.name: sc for sc in list_scenarios()}
+AC_COLORS = ["#1f77b4", "#ff7f0e", "#9467bd"]
+
+
+@st.cache_data(show_spinner="L'algorithme génétique évolue…")
+def ga_run(name, seed, pop, gens):
+    r = run_ga(SCENARIOS[name], GAConfig(pop=pop, generations=gens, seed=seed))
+    return r.genes, r.generation, r.fitness, r.pair_dmin, r.best_genes
+
+
+@st.cache_data(show_spinner="Lecture des solutions de l'ENAC…")
+def enac_run(name):
+    s = SCENARIOS[name]
+    genes, fit, dmin, gen, best = zenodo.load_run(s, int("".join(c for c in name if c.isdigit())))
+    return genes, gen, fit, zenodo.pair_dmin(s, genes), best
+
+
+@st.cache_data
+def heat(name, genes_key, _genes, _pd):
+    return heat_layers(SCENARIOS[name], _genes, _pd)
+
+
+def route_traces(scn, genes, with_original=True):
+    out = []
+    for i, r in enumerate(scn.routes):
+        if with_original:
+            out.append(go.Scatter(x=r.xy[:, 0], y=r.xy[:, 1], mode="lines", line=dict(color="#888", dash="dot", width=1), name=f"route {i + 1}", showlegend=False))
+        xy, _ = maneuver_path(r, genes[i])
+        out.append(go.Scatter(x=xy[:, 0], y=xy[:, 1], mode="lines+markers", line=dict(color=AC_COLORS[i], width=3),
+                              marker=dict(size=6), name=f"avion {i + 1}"))
+        out.append(go.Scatter(x=[r.xy[0, 0]], y=[r.xy[0, 1]], mode="markers+text", text=[f"✈{i + 1}"], textposition="top center",
+                              marker=dict(size=1, color=AC_COLORS[i]), showlegend=False))
+    return out
+
+
+def map_layout(fig, scn, title):
+    lo, hi = scn.bounds(10)
+    fig.update_layout(title=title, height=520, margin=dict(l=0, r=0, t=40, b=0), legend=dict(orientation="h"),
+                      xaxis=dict(range=[lo[0], hi[0]], title="x (NM)"), yaxis=dict(range=[lo[1], hi[1]], scaleanchor="x", title="y (NM)"))
+    return fig
+
+
+with tab5:
+    st.header("Résoudre un conflit aérien avec un algorithme génétique")
+    st.markdown(
+        """
+Réimplémentation de **« Usage of more Transparent and Explainable Conflict Resolution Algorithm: Air Traffic Controller Feedback »**
+(Hurter, Degas, Durand, Guibert, Ahmed, Begum… · *Transportation Research Procedia* 66, 2022), second cas d'usage d'ARTIMATION.
+
+**Le problème.** Plusieurs avions convergent vers le même point au même moment : s'ils ne font rien, ils passent à moins de 7 NM
+(≈ 13 km) les uns des autres, c'est un *conflit*. Il faut modifier leurs trajectoires le moins possible.
+
+**L'algorithme génétique** imite l'évolution : une *population* de 100 solutions candidates (une manœuvre par avion : *à quel instant
+tourner, de quel angle, quand revenir sur la route*), notées par une **fitness** (durée des conflits, longueur ajoutée, nombre de manœuvres).
+À chaque génération, les meilleures se *croisent* (on échange des manœuvres entre deux solutions) et *mutent* (on les perturbe un peu).
+Après 100 générations, la meilleure est proposée au contrôleur.
+
+**Pourquoi l'expliquer ?** Un contrôleur qui ne voit que *la* solution (**BlackBox**) doit lui faire confiance aveuglément.
+Avec la **HeatMap**, il voit *tout ce que l'algorithme a exploré* : en **vert** les modifications sûres, en **rouge** les dangereuses.
+Il comprend la marge de manœuvre, et peut en choisir une autre. Dans l'étude suivante (21 contrôleurs, EEG), la HeatMap réduit leur charge mentale.
+        """
+    )
+    c1, c2, c3 = st.columns([2, 2, 2])
+    name = c1.selectbox("Scénario (vols réels de 2016, ENAC)", list(SCENARIOS), index=1)
+    scn = SCENARIOS[name]
+    k = int("".join(ch for ch in name if ch.isdigit()))
+    sources = ["Mon algorithme génétique (réimplémenté)"] + (["Algorithme original de l'ENAC (données Zenodo)"] if zenodo.available(k) else [])
+    src = c2.radio("Source des solutions", sources)
+    seed = c3.number_input("Graine aléatoire", 0, 999, 0)
+    if len(sources) == 1:
+        st.caption("Pour comparer avec l'algorithme original : `python scripts/fetch_zenodo.py` (49 Mo), puis relancer l'app.")
+    genes_all, gen_all, fit_all, pd_all, best = enac_run(name) if src != sources[0] else ga_run(name, int(seed), 100, 100)
+    ev = evaluate(scn, best)
+    dmin_all = np.array([p[np.isfinite(p)].min() for p in pd_all])
+
+    m = st.columns(4)
+    m[0].metric("Candidats explorés", f"{len(genes_all):,}")
+    m[1].metric("Part de solutions sûres", f"{(dmin_all >= SEP_NM).mean():.0%}")
+    m[2].metric("Séparation minimale retenue", f"{ev.dmin:.1f} NM", f"seuil {SEP_NM:.0f} NM", delta_color="off")
+    m[3].metric("Longueur ajoutée", f"{ev.extra_nm:.1f} NM")
+
+    left, right = st.columns(2)
+    fig_b = go.Figure(route_traces(scn, best))
+    left.plotly_chart(map_layout(fig_b, scn, "BlackBox : seulement la solution proposée"), width='stretch')
+    which = right.radio("Avion à analyser", ["Tous"] + [f"Avion {i + 1}" for i in range(scn.n)], horizontal=True)
+    H = heat(name, f"{src}|{seed}", genes_all, pd_all)
+    lo = H["lo"]
+    xs, ys = lo[0] + H["cell"] * (np.arange(H["safe"].shape[2]) + 0.5), lo[1] + H["cell"] * (np.arange(H["safe"].shape[1]) + 0.5)
+    sel = slice(None) if which == "Tous" else slice(int(which[-1]) - 1, int(which[-1]))
+    layers = []
+    for key, rgb in (("unsafe", "214,39,40"), ("safe", "44,160,44")):
+        z = np.log1p(H[key][sel].sum(0))
+        layers.append(go.Heatmap(x=xs, y=ys, z=np.where(z > 0, z, np.nan), showscale=False, hoverinfo="skip",
+                                 colorscale=[[0, f"rgba({rgb},0.15)"], [1, f"rgba({rgb},0.9)"]]))
+    fig_h = go.Figure(layers + route_traces(scn, best))
+    right.plotly_chart(map_layout(fig_h, scn, "HeatMap : vert = modifications sûres, rouge = dangereuses"), width='stretch')
+    st.caption("Chaque case colorée = endroit où au moins un candidat est passé (échelle logarithmique). "
+               "Plus c'est opaque, plus l'algorithme y est passé. La solution retenue est la ligne épaisse.")
+
+    st.subheader("Consignes données au contrôleur")
+    for line in instructions(scn, best):
+        st.markdown(f"- {line}")
+
+    a, b = st.columns(2)
+    gens = pd.DataFrame({"génération": gen_all, "fitness": fit_all, "sûr": dmin_all >= SEP_NM})
+    per = gens.groupby("génération").agg(meilleure=("fitness", "max"), moyenne=("fitness", "mean"), part_sûre=("sûr", "mean")).reset_index()
+    a.plotly_chart(px.line(per.melt("génération", ["meilleure", "moyenne"], var_name="fitness", value_name="valeur"), x="génération", y="valeur",
+                           color="fitness", title="L'évolution : la population s'améliore à chaque génération"), width='stretch')
+    sep_fig = go.Figure()
+    for (i, j), (t, d) in separation_curves(scn, best).items():
+        sep_fig.add_scatter(x=t, y=d, name=f"avion {i + 1} – avion {j + 1}", mode="lines")
+    sep_fig.add_hline(y=SEP_NM, line=dict(color="red", dash="dash"), annotation_text="7 NM")
+    sep_fig.update_layout(title="Distance entre avions au cours du temps (solution retenue)", xaxis_title="temps (s)", yaxis_title="NM")
+    b.plotly_chart(sep_fig, width='stretch')
+
+    st.subheader("À toi de jouer : modifie les manœuvres")
+    st.caption("Pars de la solution de l'algorithme et change-la. Un contrôleur qui voit la HeatMap sait où il peut passer sans risque.")
+    mine = best.copy()
+    cols = st.columns(scn.n)
+    for i, col in enumerate(cols):
+        r = scn.routes[i]
+        col.markdown(f"**Avion {i + 1}**")
+        a_ = col.slider("angle (°, + = gauche)", -40, 40, int(np.clip(round(best[i][2]), -40, 40)), 5, key=f"a{i}{name}{src}{seed}")
+        t1 = col.slider("début du virage (s)", 0, int(r.t[-1]), int(np.clip(best[i][0], 0, r.t[-1])), 5, key=f"t1{i}{name}{src}{seed}")
+        dur = col.slider("durée avant retour (s)", 5, 450, int(np.clip(best[i][1] - best[i][0], 5, 450)), 5, key=f"d{i}{name}{src}{seed}")
+        mine[i] = [t1, t1 + dur, a_]
+    ev2 = evaluate(scn, mine)
+    ok = ev2.dmin >= SEP_NM
+    st.markdown(f"**Séparation minimale : {ev2.dmin:.1f} NM** — {'✅ sûr' if ok else '⚠️ conflit'} · durée sous 7 NM : {ev2.conflict_s:.0f} s · longueur ajoutée : {ev2.extra_nm:.1f} NM · fitness {ev2.fitness:.3f}")
+    fig_m = go.Figure(layers + route_traces(scn, mine))
+    st.plotly_chart(map_layout(fig_m, scn, "Ta solution sur la HeatMap"), width='stretch')
+    st.caption("SHAP, LIME et le CBR (onglets 2 à 5) expliquent un modèle prédictif ; ici, l'algorithme génétique est transparent par exploration : on montre tout l'espace qu'il a parcouru.")

@@ -3,3 +3,4 @@ __pycache__/
 artifacts/*.pkl
 artifacts/*.parquet
 .pytest_cache/
+data/zenodo/
