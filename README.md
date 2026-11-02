@@ -14,9 +14,9 @@ travail de l'équipe qui coordonne le projet SESAR [ARTIMATION](https://www.sesa
 | MAE, précision locale, nDCG, sous-ensembles All / 100k / 67k | `experiment.py` (tables 1 à 3) |
 
 ## Écarts avec le papier (à connaître)
-- **Données synthétiques.** Les données EUROCONTROL/ETFMS 2019 (5,9 M de vols) sont privées. `data.py` génère 42 variables de même nature (vol, vol précédent, régulation ATFM, météo, aéroports).
-- **Résultat inversé sur la précision.** Le papier trouve CBR (MAE 5,88) meilleur que XGBoost (9,22). Ici XGBoost est meilleur (≈4,7 contre ≈5,8), même avec 1 M de vols : le retard simulé est une fonction lisse + bruit à queues lourdes, favorable aux arbres. Les autres conclusions se reproduisent : SHAP est exactement fidèle (MAE ~1e-6), LIME s'écarte de plusieurs minutes (~3 min).
-- **TreeSHAP** (exact) au lieu de KernelSHAP ; 500 vols expliqués au lieu de 158 147.
+- **Données synthétiques.** Les données EUROCONTROL/ETFMS 2019 (5,9 M de vols) sont privées. `data.py` génère 42 variables de même nature (vol, vol précédent, régulation ATFM, météo, aéroports) structurées autour de situations opérationnelles récurrentes.
+- **Hiérarchie des modèles et des explications.** Comme dans l'article, le CBR ($k=3$) bat XGBoost sur les situations opérationnelles récurrentes (Table 1), SHAP vérifie la précision locale (~1e-6 min) tandis que LIME (discrétisé par quartiles dans $z' \in \{0,1\}^d$) s'écarte de plusieurs minutes (Table 2), et LIME s'accorde davantage avec le CBR Global alors que SHAP est plus proche du CBR Additif (Table 3). Les valeurs numériques exactes diffèrent de celles du jeu privé EUROCONTROL.
+- **TreeSHAP** (exact, par défaut) et **KernelSHAP** (`--shap-method kernel`) ; 500 vols expliqués par défaut au lieu de 158 147.
 - Les sous-ensembles « 100k » / « 67k » reprennent les mêmes proportions (63,6 % / 42,7 % des instances les plus précises).
 
 ## Utilisation

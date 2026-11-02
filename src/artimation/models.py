@@ -5,7 +5,7 @@ from xgboost import XGBRegressor
 
 # Hyperparamètres retenus par l'article (sélection sur 288 combinaisons).
 XGB_PARAMS = dict(learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.5,
-                  colsample_bytree=0.5, n_estimators=500)
+                  colsample_bytree=0.5, n_estimators=500, importance_type="total_gain")
 
 
 def train_xgb(X, y, seed=0):
@@ -40,7 +40,7 @@ class WeightedCBR:
 
     def neighbors(self, X):
         dist, idx = self.nn_.kneighbors(self._embed(X))
-        return dist, idx
+        return np.where(dist < 1e-7, 0.0, dist), idx
 
     def predict(self, X):
         _, idx = self.neighbors(X)
