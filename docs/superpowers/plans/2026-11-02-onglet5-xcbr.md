@@ -11,9 +11,9 @@ pas: ###
 ## 1.1 Explicabilité locale LIME, SHAP et poids globaux du CBR
 
 ### Task 1: Aligner train_xgb, lime_explain et shap_values
-- [ ] Utiliser `importance_type="total_gain"` dans `XGB_PARAMS` (`src/artimation/models.py`) et tronquer le bruit numérique dans `WeightedCBR.neighbors()`.
-- [ ] Supporter `method="tree" | "kernel"` dans `shap_values()` et `discretize_continuous` dans `lime_explain()` (`src/artimation/explain.py`).
-- [ ] Vérifier que `local_accuracy_mae` et `mean_ndcg` traitent correctement les attributions produites.
+- [x] Utiliser `importance_type="total_gain"` dans `XGB_PARAMS` (`src/artimation/models.py`) et tronquer le bruit numérique dans `WeightedCBR.neighbors()`.
+- [x] Supporter `method="tree" | "kernel"` dans `shap_values()` et `discretize_continuous` dans `lime_explain()` (`src/artimation/explain.py`).
+- [x] Vérifier que `local_accuracy_mae` et `mean_ndcg` traitent correctement les attributions produites.
 
 ### Task 2: Couvrir LIME et SHAP dans tests/test_core.py
 - [ ] Ajouter les tests unitaires de `lime_explain` (modes continu et discrétisé) dans `tests/test_core.py`.

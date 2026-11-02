@@ -11,6 +11,8 @@ def shap_values(model, X, method="tree", X_bg=None, nsamples=200, seed=0):
     - method="tree" (défaut) : TreeSHAP exact et rapide sur les 500 arbres.
     - method="kernel" : KernelSHAP (échantillonnage de coalitions, comme dans l'article XCBR'22).
     """
+    if method not in ("tree", "kernel"):
+        raise ValueError(f"unknown SHAP method {method!r} (expected 'tree' or 'kernel')")
     X = np.asarray(X, dtype=float)
     if method == "kernel":
         bg = X if X_bg is None else np.asarray(X_bg, dtype=float)
@@ -58,7 +60,7 @@ def local_accuracy_mae(model_pred, explanation_pred):
 
 def mean_ndcg(reference, attribution):
     """nDCG moyen : l'ordre des |attributions| est comparé à celui d'une référence (|φ| du CBR)."""
-    ref, att = np.abs(np.atleast_2d(reference)), np.abs(attribution)
+    ref, att = np.abs(np.atleast_2d(reference)), np.abs(np.atleast_2d(attribution))
     if ref.shape[0] == 1:
         ref = np.repeat(ref, len(att), axis=0)
     return float(np.mean([ndcg_score(r[None], a[None]) for r, a in zip(ref, att)]))

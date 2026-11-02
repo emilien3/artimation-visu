@@ -3,6 +3,10 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from xgboost import XGBRegressor
 
+# Distances are rounded to this many decimals before ranking neighbours: float noise
+# (~1e-8 on exact duplicates) must not decide which of several tied cases is retrieved.
+DIST_DECIMALS = 6
+
 # Hyperparamètres retenus par l'article (sélection sur 288 combinaisons).
 XGB_PARAMS = dict(learning_rate=0.1, max_depth=7, min_child_weight=1, subsample=0.5,
                   colsample_bytree=0.5, n_estimators=500, importance_type="total_gain")
@@ -29,8 +33,22 @@ class WeightedCBR:
         X = np.asarray(X, dtype=float)
         self.min_, self.range_ = X.min(0), np.where(np.ptp(X, 0) == 0, 1, np.ptp(X, 0))
         self.y_ = np.asarray(y, dtype=float)
-        self.nn_ = NearestNeighbors(n_neighbors=self.k, algorithm="brute").fit(self._embed(X))
+        self._index(self._embed(X))
         return self
+
+    def _index(self, E):
+        # Exact duplicates are indexed once; members_[offsets_[u]:offsets_[u + 1]] lists the case indices
+        # (ascending) of distinct case u, so tied duplicates are retrieved lowest index first.
+        self.cases_, inv = np.unique(E, axis=0, return_inverse=True)
+        inv = inv.ravel()
+        self.members_ = np.argsort(inv, kind="stable")
+        self.offsets_ = np.r_[0, np.cumsum(np.bincount(inv))]
+        self.nn_ = NearestNeighbors(n_neighbors=min(len(self.cases_), 2 * self.k), algorithm="brute").fit(self.cases_)
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if "members_" not in state:  # pickled before duplicate-aware indexing: rebuild from the old index
+            self._index(state["nn_"]._fit_X)
 
     def scale(self, X):
         return (np.asarray(X, dtype=float) - self.min_) / self.range_
@@ -39,8 +57,26 @@ class WeightedCBR:
         return self.scale(X) * np.sqrt(self.w)
 
     def neighbors(self, X):
-        dist, idx = self.nn_.kneighbors(self._embed(X))
-        return np.where(dist < 1e-7, 0.0, dist), idx
+        """k nearest cases, sorted by (rounded distance, case index): ties go to the lowest index."""
+        Q = self._embed(X)
+        d, u = self.nn_.kneighbors(Q)
+        d = np.round(d, DIST_DECIMALS)
+        dist, idx = np.empty((len(Q), self.k)), np.empty((len(Q), self.k), dtype=int)
+        for r in range(len(Q)):
+            dist[r], idx[r] = self._top_k(d[r], u[r])
+            if len(u[r]) < len(self.cases_) and dist[r, -1] == d[r, -1]:
+                # the tie may extend beyond the candidate pool: rank every distinct case
+                full = np.round(np.sqrt(((self.cases_ - Q[r]) ** 2).sum(1)), DIST_DECIMALS)
+                dist[r], idx[r] = self._top_k(full, np.arange(len(self.cases_)))
+        return dist, idx
+
+    def _top_k(self, d, u):
+        """Expand distinct cases u (at rounded distances d) to their members and keep the k best."""
+        sizes = np.diff(self.offsets_)[u]
+        cand_d = np.repeat(d, sizes)
+        cand_i = np.concatenate([self.members_[self.offsets_[j]:self.offsets_[j + 1]] for j in u])
+        best = np.lexsort((cand_i, cand_d))[:self.k]
+        return cand_d[best], cand_i[best]
 
     def predict(self, X):
         _, idx = self.neighbors(X)
