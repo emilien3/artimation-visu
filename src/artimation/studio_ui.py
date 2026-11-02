@@ -20,6 +20,7 @@ from .vector import analyze3d, density_maps3d, heading_space3d
 
 BASE = {s.name: s for s in list_scenarios()}
 FREE_HORIZON_S = 900.0
+MAX_FREE_AIRCRAFT = 8  # une couleur par avion dans la vue ; borne aussi le coût de l'évaluation (O(n²) paires)
 
 
 @st.cache_data(show_spinner="L'algorithme génétique évolue…")
@@ -73,15 +74,24 @@ def _situation():
         s = state_at(r, (0, 0, 0, 0), 0.0)
         seed_rows.append(dict(avion=f"AC{i + 1:03d}", x=round(s[0], 1), y=round(s[1], 1), cap=round(s[4]), vitesse=round(s[3]), FL=360, vz=0))
     st.caption("Avions en route directe, vitesse constante. Repère : x vers l'est, y vers le nord (NM) ; cap en degrés depuis le nord ; ajoute/supprime des lignes.")
+    num = st.column_config.NumberColumn
     ed = st.data_editor(pd.DataFrame(seed_rows), key="free_rows", num_rows="dynamic", hide_index=True, use_container_width=True,
-                        column_config={"vz": st.column_config.NumberColumn("taux vertical (ft/min)", step=100)})
+                        column_config={"x": num("x (NM)", min_value=-1000, max_value=1000), "y": num("y (NM)", min_value=-1000, max_value=1000),
+                                       "cap": num("cap (°)", min_value=0, max_value=360), "vitesse": num("vitesse (kt)", min_value=100, max_value=700),
+                                       "FL": num("FL", min_value=100, max_value=450, step=10),
+                                       "vz": num("taux vertical (ft/min)", min_value=-3000, max_value=3000, step=100)})
     ed = ed.dropna(subset=["x", "y", "cap", "vitesse", "FL"]).reset_index(drop=True)
-    ed["avion"] = [str(a) if isinstance(a, str) and a else f"AC{i + 1:03d}" for i, a in enumerate(ed["avion"])]
-    ed = ed[ed["vitesse"] > 0]
+    if len(ed) > MAX_FREE_AIRCRAFT:
+        st.warning(f"{MAX_FREE_AIRCRAFT} avions maximum : les suivants sont ignorés.")
+        ed = ed.head(MAX_FREE_AIRCRAFT)
+    # l'éditeur borne la saisie côté navigateur ; on re-borne côté serveur
+    ed = ed.assign(x=ed["x"].clip(-1000, 1000), y=ed["y"].clip(-1000, 1000), cap=ed["cap"].clip(0, 360), vitesse=ed["vitesse"].clip(100, 700),
+                   FL=ed["FL"].clip(100, 450), vz=ed["vz"].fillna(0).clip(-3000, 3000))
+    ed["avion"] = [str(a)[:12] if isinstance(a, str) and a else f"AC{i + 1:03d}" for i, a in enumerate(ed["avion"])]
     if len(ed) < 2:
-        st.warning("Il faut au moins deux avions (vitesse > 0).")
+        st.warning("Il faut au moins deux avions.")
         st.stop()
-    rows = [dict(id=r.avion, x=r.x, y=r.y, heading=r.cap, speed=r.vitesse, fl=r.FL, vz=0.0 if pd.isna(r.vz) else r.vz) for r in ed.itertuples()]
+    rows = [dict(id=r.avion, x=r.x, y=r.y, heading=r.cap, speed=r.vitesse, fl=r.FL, vz=r.vz) for r in ed.itertuples()]
     return scenario_from_aircraft(rows, FREE_HORIZON_S), "libre", False
 
 

@@ -100,3 +100,12 @@ def test_ga_uses_level_change_when_allowed_and_resolves_all():
         r = run_ga(s, GAConfig(pop=60, generations=60, seed=2, vertical=True))
         ev = evaluate(s, r.best_genes)
         assert r.genes.shape[2] == 4 and ev.conflict_s == 0 and ev.dmin >= SEP_NM, name
+
+
+def test_heat_grid_is_bounded_for_huge_scenarios():
+    from artimation.conflict import MAX_HEAT_CELLS, heat_layers
+    rows = [dict(id="A", x=-1000, y=-1000, heading=45, speed=700, fl=350), dict(id="B", x=1000, y=1000, heading=225, speed=700, fl=350)]
+    s = scenario_from_aircraft(rows, 900)
+    g = np.zeros((1, 2, 4))
+    h = heat_layers(s, g, evaluate(s, g[0]).pair_dmin[None])
+    assert h["safe"].shape[1] * h["safe"].shape[2] <= MAX_HEAT_CELLS * 1.1

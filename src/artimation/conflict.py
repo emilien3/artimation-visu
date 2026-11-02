@@ -20,6 +20,7 @@ SEP_NM = 7.0  # séparation horizontale minimale visée (zone verte de la HeatMa
 SEP_FT = 1000.0  # séparation verticale minimale (RVSM)
 FT_PER_S = 25.0  # vitesse verticale des changements de niveau (1 500 ft/min)
 DEFAULT_FL = 360  # les vols réels recoupés des scénarios 2 et 9 volent au FL360, taux vertical nul
+MAX_HEAT_CELLS = 40_000  # cellules max par avion dans la HeatMap
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
@@ -284,6 +285,8 @@ def heat_layers(scn, genes_all, pair_dmin_all, sep=SEP_NM, cell=1.0, step=0.5):
     séparation minimale avec tous les autres avions est >= sep.
     """
     lo, hi = scn.bounds()
+    cell = max(cell, float(np.sqrt(np.prod(hi - lo) / MAX_HEAT_CELLS)))  # grille bornée : la cellule grossit avec l'étendue
+    step = max(step, cell / 2)
     nx, ny = (np.ceil((hi - lo) / cell)).astype(int)
     safe = np.zeros((scn.n, ny, nx))
     unsafe = np.zeros((scn.n, ny, nx))
