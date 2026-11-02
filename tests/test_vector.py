@@ -61,3 +61,36 @@ def test_density_matches_js():
         assert np.mean(np.abs(py[key] - ref) < 1e-6) > 0.97, key
         assert np.corrcoef(py[key].ravel(), ref.ravel())[0, 1] > 0.995, key
     assert (py["signed"] < 0).any() and (py["signed"] > 0).any()
+
+
+# --- extension 3D ------------------------------------------------------------------------------------------------------
+from artimation.vector import analyze3d, density_maps3d, encounter3d, heading_space3d  # noqa: E402
+
+
+def test_3d_reduces_to_2d_at_same_level():
+    py2, py3 = density_maps(DEMO, 10, 5, cols=80, rows=60), density_maps3d(DEMO, 10, 5, 1000, cols=80, rows=60)
+    for key in ("positive", "negative"):
+        assert np.mean(np.abs(py2[key] - py3[key]) < 1e-6) > 0.995, key
+    for a in DEMO:
+        h2, h3 = heading_space(DEMO, a.id, 10, 5), heading_space3d(DEMO, a.id, 10, 5, 1000)
+        assert h3["safe_degrees"] == pytest.approx(h2["safe_degrees"], abs=0.3)
+        assert h3["current_safe"] == h2["current_safe"]
+
+
+def test_3d_vertical_separation_removes_conflict_and_window_logic():
+    a, b = Ac("A", 0, 45, 360, 90, z=36000), Ac("B", 60, 45, 360, 270, z=36000)
+    assert encounter3d(a, b, 10, 5, 1000)["risk"]
+    b2 = Ac("B", 60, 45, 360, 270, z=38000)  # 2000 ft plus haut : plus de conflit
+    e = encounter3d(a, b2, 10, 5, 1000)
+    assert not e["risk"] and e["separated_vertically"] and heading_space3d([a, b2], "A", 10, 5, 1000)["safe_degrees"] == pytest.approx(360)
+    # B descend vers le niveau de A à 400 ft/min : écart 2000 ft -> < 1000 ft entre t = 2,5 et 7,5 min ; approche minimale à t = 5 min
+    b3 = Ac("B", 60, 45, 360, 270, z=38000, vz=-400)
+    assert not encounter3d(a, b3, 4, 5, 1000)["risk"]  # à t = 4 min ils sont encore à 12 NM
+    assert encounter3d(a, b3, 10, 5, 1000)["risk"]  # l'approche (t = 5 min) tombe dans la fenêtre verticale
+
+
+def test_3d_analysis_flags_vertically_separated_crossings():
+    a, b = Ac("A", 0, 45, 360, 90, z=36000), Ac("B", 30, 75, 360, 0, z=38000)  # arrivent ensemble en (30, 45), 2000 ft d'écart
+    res = analyze3d([a, b], 10, 5, 1000)
+    assert res and not res[0]["risk"] and res[0]["separated_vertically"] and res[0]["vertical_sep"] == pytest.approx(2000)
+    assert analyze3d([a, Ac("B", 30, 75, 360, 0, z=36000)], 10, 5, 1000)[0]["risk"]

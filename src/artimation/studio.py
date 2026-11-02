@@ -12,6 +12,9 @@ from urllib.parse import unquote
 
 import numpy as np
 
+from dataclasses import dataclass
+
+from .conflict import state_at
 from .vector import Ac
 
 VENDOR = Path(__file__).resolve().parents[2] / "vendor" / "nextqcm"
@@ -38,17 +41,46 @@ def scenario_frame(scn):
     return lambda x, y: (x - cx + W / 2, -(y - cy) + H / 2)
 
 
+@dataclass(frozen=True)
+class Frame:
+    """Passage du repère du scénario (y vers le nord) au repère de l'outil Vector (y vers le bas), sans changement d'échelle."""
+    x0: float
+    y1: float
+    width: float
+    height: float
+
+    @staticmethod
+    def from_scenario(scn, margin=40.0):
+        lo, hi = scn.bounds(margin)
+        return Frame(float(lo[0]), float(hi[1]), float(hi[0] - lo[0]), float(hi[1] - lo[1]))
+
+    def to_vec(self, x, y):
+        return x - self.x0, self.y1 - y
+
+    def to_world(self, xv, yv):
+        return xv + self.x0, self.y1 - yv
+
+
+def aircraft_states(scn, genes, t, frame):
+    """Avions en vol à l'instant t sous la solution `genes`, au format Vector : position, cap, vitesse, altitude, taux vertical."""
+    out = []
+    for i, (r, g) in enumerate(zip(scn.routes, genes)):
+        st = state_at(r, g, t)
+        if st is None:
+            continue
+        x, y = frame.to_vec(st[0], st[1])
+        out.append(Ac(scn.ids[i], float(x), float(y), round(st[3], 1), round(st[4], 2), round(st[2], 1), round(st[5], 1)))
+    return out
+
+
 def aircraft_at(scn, t):
-    """Avions du scénario à l'instant t (secondes), dans le repère de l'outil, vitesse en kt et cap horaire depuis le nord."""
+    """Avions du scénario (sans manœuvre) dans la zone 120 × 90 NM de l'outil d'origine, centrés."""
     to_vec, out = scenario_frame(scn), []
     for i, r in enumerate(scn.routes):
-        if not (r.t[0] <= t <= r.t[-1]):
-            continue
-        k = r.leg(t)
-        dx, dy = r.xy[k + 1] - r.xy[k]
-        speed = hypot(dx, dy) / (r.t[k + 1] - r.t[k]) * 3600
-        x, y = to_vec(*r.position(t))
-        out.append(Ac(f"AC{i + 1:03d}", float(x), float(y), round(float(speed), 1), round(degrees(atan2(dx, dy)) % 360, 2)))
+        st = state_at(r, (0, 0, 0, 0), t)
+        if st is not None:
+            x, y = to_vec(st[0], st[1])
+            out.append(Ac(scn.ids[i], float(x), float(y), round(st[3], 1), round(st[4], 2), round(st[2], 1), round(st[5], 1)))
     return out
 
 

@@ -7,9 +7,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .conflict import SEP_NM, evaluate
+from .conflict import SEP_FT, SEP_NM, evaluate
 
 ALPHAS = np.arange(-35, 40, 5)  # angles de déviation observés dans les données ENAC (pas de 5°)
+LEVELS = np.array([-2000.0, -1000.0, 1000.0, 2000.0])  # changements de niveau autorisés (ft), si `vertical`
 
 
 @dataclass
@@ -23,11 +24,13 @@ class GAConfig:
     immigrants: float = 0.1
     seed: int = 0
     sep: float = SEP_NM
+    sep_v: float = SEP_FT
+    vertical: bool = False  # autorise les changements de niveau (extension 3D)
 
 
 @dataclass
 class GAResult:
-    genes: np.ndarray  # (N, A, 3) tous les candidats évalués (pour la HeatMap)
+    genes: np.ndarray  # (N, A, 4) : t1, t2, alpha, dz tous les candidats évalués (pour la HeatMap)
     generation: np.ndarray
     ids: np.ndarray
     origin: list
@@ -42,21 +45,36 @@ class GAResult:
         return self.genes[self.best_idx]
 
 
-def _random_gene(rng, route):
+def _random_gene(rng, route, vertical=False):
     if rng.random() < 0.25:
-        return np.array([route.t[0], route.t[0], 0.0])  # route inchangée
+        return np.array([route.t[0], route.t[0], 0.0, 0.0])  # route inchangée
     t1 = rng.uniform(route.t[0], route.t[-1] * 0.9)
-    return np.array([t1, t1 + rng.uniform(20, 350), rng.choice(ALPHAS[ALPHAS != 0])])
+    t2 = t1 + rng.uniform(20, 350)
+    alpha, dz = rng.choice(ALPHAS[ALPHAS != 0]), 0.0
+    if vertical:
+        kind = rng.random()  # 50 % niveau seul, 25 % cap + niveau, 25 % cap seul
+        if kind < 0.75:
+            dz = rng.choice(LEVELS)
+        if kind < 0.5:
+            alpha = 0.0
+    return np.array([t1, t2, alpha, dz])
 
 
-def _mutate(rng, gene, route):
-    t1, t2, a = gene
-    if a == 0 or rng.random() < 0.15:
-        return _random_gene(rng, route)
+def _mutate(rng, gene, route, vertical=False):
+    t1, t2, a, dz = gene
+    if (a == 0 and dz == 0) or rng.random() < 0.15:
+        return _random_gene(rng, route, vertical)
     t1 = np.clip(t1 + rng.normal(0, 30), route.t[0], route.t[-1] * 0.95)
     t2 = max(t1 + 10, t2 + rng.normal(0, 40))
-    a = np.clip(a + 5 * rng.integers(-2, 3), ALPHAS[0], ALPHAS[-1])
-    return np.array([t1, t2, a])
+    if a != 0:
+        a = np.clip(a + 5 * rng.integers(-2, 3), ALPHAS[0], ALPHAS[-1])
+        if a == 0 and dz == 0:
+            a = rng.choice([-5, 5])
+    if vertical and rng.random() < 0.2:
+        dz = rng.choice(np.concatenate([LEVELS, [0.0]]))
+        if dz == 0 and a == 0:
+            a = rng.choice([-5, 5])
+    return np.array([t1, t2, a, dz])
 
 
 def run_ga(scn, cfg=GAConfig()):
@@ -65,7 +83,7 @@ def run_ga(scn, cfg=GAConfig()):
     next_id = [0]
 
     def add(genes, gen, origin):
-        ev = evaluate(scn, genes, cfg.sep)
+        ev = evaluate(scn, genes, cfg.sep, cfg.sep_v)
         i = next_id[0]
         next_id[0] += 1
         for k, v in zip(rec, (genes.copy(), gen, i, origin, ev.fitness, ev.dmin, ev.conflict_s, ev.pair_dmin)):
@@ -73,7 +91,7 @@ def run_ga(scn, cfg=GAConfig()):
         return i
 
     def new_random():
-        return np.array([_random_gene(rng, r) for r in scn.routes])
+        return np.array([_random_gene(rng, r, cfg.vertical) for r in scn.routes])
 
     pop = [add(g, 0, "G") for g in (new_random() for _ in range(cfg.pop))]
     best_so_far = []
@@ -95,7 +113,7 @@ def run_ga(scn, cfg=GAConfig()):
                 origin = f"C_{pa}_{pb}"
             for a in range(scn.n):
                 if rng.random() < cfg.p_mut:
-                    child[a] = _mutate(rng, child[a], scn.routes[a])
+                    child[a] = _mutate(rng, child[a], scn.routes[a], cfg.vertical)
             nxt.append(add(child, gen, origin))
         pop = nxt
         best_so_far.append(max(pop, key=lambda i: rec["fit"][i]))

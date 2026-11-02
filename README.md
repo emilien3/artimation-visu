@@ -29,7 +29,7 @@ PYTHONPATH=src .venv/bin/python -m artimation.experiment             # tables 1-
 
 ## Second papier : résolution de conflits par algorithme génétique
 Réimplémentation de **« Usage of more Transparent and Explainable Conflict Resolution Algorithm: Air Traffic Controller Feedback »**
-(Hurter, Degas, Durand, Guibert, Ahmed, Begum et al., *Transportation Research Procedia* 66, 2022). Onglet 6 de l'app.
+(Hurter, Degas, Durand, Guibert, Ahmed, Begum et al., *Transportation Research Procedia* 66, 2022). Studio (onglet 6 de l'app).
 
 | Élément | Ici |
 |---|---|
@@ -46,11 +46,22 @@ corrèle à 0,99-0,9999 avec celle du GA original (écart médian 0-0,2 NM). Mon
 **Écarts.** Les paramètres du GA original (taille, taux, fitness exacte) ne sont pas publiés : choix raisonnables ici. Les valeurs de fitness ne sont donc pas
 comparables à celles de l'ENAC. L'étude utilisateurs (21 contrôleurs, EEG) n'est pas reproduite, seules les deux interfaces le sont.
 
-## Outil Vector (ENAC) intégré + vue 3D
+## Studio unique : GA + outil Vector (ENAC) + altitude, en 2D ou en 3D
 Intègre « Vector — Aircraft crossing studio » (page enregistrée de https://recherche.enac.fr/~hurter/NextQCM/, copie intacte dans `vendor/nextqcm/`).
-Analyse détaillée : [`docs/NEXTQCM_ANALYSIS.md`](docs/NEXTQCM_ANALYSIS.md).
+Analyse détaillée : [`docs/NEXTQCM_ANALYSIS.md`](docs/NEXTQCM_ANALYSIS.md). L'onglet 6 de l'app est **un seul outil** :
 
-- **Portage Python** (`vector.py`) de l'espace des caps sûrs et de la densité, validé cellule par cellule contre le JS d'origine (`tests/test_vector.py`, nécessite `node`).
-- **Outil d'origine embarqué** (onglet 7), avec un scénario ARTIMATION chargé via `studio.aircraft_at` (instant t réglable).
-- **Bouton Vue 3D** : espace-temps (x, y, t) des trajectoires et candidats du GA (onglet 6), relief 3D de la densité (onglets 6 et 7).
-- `python3 scripts/fetch_zenodo.py`, `python3 -m pytest`… (sur macOS, `python` n'existe pas : utilise `python3` ou `.venv/bin/python`).
+- **Une situation commune** : un scénario réel ARTIMATION (niveaux de vol éditables) ou des avions libres (tableau éditable).
+- **Une fenêtre de vue** qui bascule 2D / 3D avec **les mêmes couches** : fond (HeatMap de l'AG | densité exacte Vector | aucun), routes d'origine, solution,
+  avions + vecteurs vitesse à l'instant t, zones de séparation (cercles en 2D, cylindres en 3D). Axe vertical 3D : altitude, temps, ou relief de densité.
+- **Des panneaux communs** : rencontres, caps sûrs, « à toi de jouer » (modifier la solution), évolution de l'AG, séparation dans le temps, consignes.
+- **Modèle étendu à l'altitude** : conflit = < 7 NM ET < 1 000 ft (cylindre) ; l'AG peut changer de niveau (±1 000/2 000 ft à 1 500 ft/min). Au même niveau, on
+  retrouve exactement le modèle 2D d'origine (distance « équivalente » = max(horizontale, verticale × sep/sep_v)).
+- **Portage Python** (`vector.py`) de l'espace des caps sûrs et de la densité, validé cellule par cellule contre le JS d'origine (`tests/test_vector.py`, nécessite `node`),
+  puis étendu à l'altitude (`*_3d`).
+- L'outil d'origine (glisser-déposer, 2D) reste disponible dans un volet, chargé avec la situation courante ; il est isolé du reste (iframe).
+
+**Limites.** Le rendu 3D (WebGL) n'a pas pu être vérifié visuellement dans l'environnement de développement (pas de WebGL en navigateur sans interface) :
+la géométrie est testée (`tests/test_studio_view.py`) mais pas l'apparence. Les vols des scénarios ENAC sont tous au FL360 (recoupés avec `exo_artimation.txt`) : l'altitude
+y est un paramètre à explorer, pas une donnée du papier. Le changement de niveau et le coût associé dans la fitness sont des choix de modélisation, pas ceux du papier.
+
+Sur macOS, `python` n'existe pas : utilise `python3` ou `.venv/bin/python`.

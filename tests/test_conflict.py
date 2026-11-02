@@ -46,3 +46,57 @@ def test_separation_curves_and_instructions():
     assert set(curves) == {(0, 1), (0, 2), (1, 2)}
     assert min(d.min() for _, d in curves.values()) == pytest.approx(evaluate(s, g).dmin, abs=0.3)
     assert "gauche" in instructions(s, g)[0] and "inchangée" in instructions(s, g)[1]
+
+
+# --- extension 3D (altitude) -------------------------------------------------------------------
+from artimation.conflict import SEP_FT, SEP_NM, scenario_from_aircraft, separation_curves3d, state_at  # noqa: E402
+
+
+def test_vertical_separation_removes_conflict():
+    s = SCN["Scenario2"]
+    same = evaluate(s, np.zeros((3, 4)))
+    stacked = evaluate(s.with_levels([36000, 37000 + 500, 39000]), np.zeros((3, 4)))  # >= 1000 ft entre chaque paire
+    assert same.conflict_s > 100 and stacked.conflict_s == 0 and stacked.dmin >= SEP_NM
+    # 500 ft seulement : toujours en conflit
+    assert evaluate(s.with_levels([36000, 36500, 37000]), np.zeros((3, 4))).conflict_s > 0
+
+
+def test_equivalent_distance_reduces_to_horizontal_when_same_level():
+    s = SCN["Scenario5"]
+    g3 = np.array([[40, 201, -30], [316, 338, 0], [90, 224, -40]], float)
+    g4 = np.hstack([g3, np.zeros((3, 1))])
+    a, b = evaluate(s, g3), evaluate(s, g4)
+    np.testing.assert_allclose(a.pair_dmin, b.pair_dmin)
+    assert a.fitness == b.fitness and a.dmin >= 6.9
+
+
+def test_level_change_maneuver_profile_and_cost():
+    s = SCN["Scenario2"]
+    g = np.zeros((3, 4))
+    g[1] = [0, 400, 0, 1000]  # AC002 monte de 1000 ft pendant 400 s : rampe 40 s à 1500 ft/min
+    ev = evaluate(s, g)
+    assert ev.conflict_s < evaluate(s, np.zeros((3, 4))).conflict_s and ev.n_maneuvers == 1 and ev.extra_nm == 0
+    x, y, z, t = (np.asarray(v) for v in __import__("artimation.conflict", fromlist=["path_samples"]).path_samples(s.routes[1], g[1]))
+    assert z.max() == pytest.approx(37000) and z[0] == pytest.approx(36000) and z[-1] == pytest.approx(36000)
+    assert state_at(s.routes[1], g[1], 20)[5] == pytest.approx(1500)  # taux vertical pendant la rampe
+
+
+def test_free_situation_head_on_with_and_without_level_gap():
+    rows = [dict(id="A", x=0, y=0, heading=90, speed=480, fl=350), dict(id="B", x=100, y=0, heading=270, speed=480, fl=350)]
+    s = scenario_from_aircraft(rows, 900)
+    assert evaluate(s, np.zeros((2, 4))).dmin < 0.5
+    rows[1]["fl"] = 360
+    assert evaluate(scenario_from_aircraft(rows, 900), np.zeros((2, 4))).dmin == pytest.approx(7.0, abs=0.01)  # 1000 ft = exactement la séparation
+    rows[1]["fl"] = 370
+    assert evaluate(scenario_from_aircraft(rows, 900), np.zeros((2, 4))).conflict_s == 0
+    t, dh, dv = separation_curves3d(scenario_from_aircraft(rows, 900), np.zeros((2, 4)))[(0, 1)]
+    assert dv.min() == pytest.approx(2000) and dh.min() < 1
+
+
+def test_ga_uses_level_change_when_allowed_and_resolves_all():
+    from artimation.ga import GAConfig
+    for name in ("Scenario2", "Scenario4", "Scenario10"):
+        s = SCN[name]
+        r = run_ga(s, GAConfig(pop=60, generations=60, seed=2, vertical=True))
+        ev = evaluate(s, r.best_genes)
+        assert r.genes.shape[2] == 4 and ev.conflict_s == 0 and ev.dmin >= SEP_NM, name

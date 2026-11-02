@@ -30,11 +30,14 @@ On place jusqu'à 100 avions dans une zone de 120 × 90 NM, on règle vitesse et
 
 ## Intégration réalisée
 - `src/artimation/vector.py` : **portage Python** de `physics.js` + `density.js`, validé contre le JS d'origine exécuté sous node
-  (`tests/test_vector.py` : 100 % des cellules d'une grille 160 × 120 identiques, mêmes intervalles de caps).
-- `src/artimation/studio.py` : outil original reconstruit en mémoire (CSS/JS en ligne) + hook `VectorStudio.load()`, chargé avec un scénario ARTIMATION.
-- `src/artimation/viz3d.py` : vues 3D (espace-temps, relief de densité).
-- App : onglet 7 (outil intégré + vue 3D), comparaison analytique dans l'onglet 6, bouton **Vue 2D/3D**.
+  (`tests/test_vector.py` : 100 % des cellules d'une grille 160 × 120 identiques, mêmes intervalles de caps), puis **étendu à l'altitude**
+  (`encounter3d`, `heading_space3d`, `density_maps3d` : conflit = cylindre NM × ft ; au même niveau on retrouve le 2D).
+- `src/artimation/studio_ui.py` + `studio_view.py` : **un seul outil**. Les onglets « GA » et « Vector » ont été fusionnés : même situation, mêmes réglages, mêmes panneaux ;
+  seule la fenêtre de vue change entre 2D et 3D.
+- `src/artimation/studio.py` : outil d'origine reconstruit en mémoire (CSS/JS en ligne) avec un hook `VectorStudio.load()`, gardé comme volet de référence (iframe isolée :
+  ses modifications ne remontent pas dans le studio, d'où la fusion par réimplémentation plutôt que par intégration de l'iframe).
+- Perdu dans la fusion : le glisser-déposer des avions sur la carte (remplacé par un tableau éditable). Récupérable avec un composant Streamlit bidirectionnel si besoin.
 
 ## Limites connues
-- L'outil est 2D : tous les avions au même niveau. La 3D livrée est une vue *d'affichage* (temps ou densité en hauteur), pas de la 3D aérienne.
-- `exo_artimation.txt` (Zenodo 7437564) contient les niveaux de vol des 139 vols d'origine : une vraie 3D (altitude) est possible mais demande d'étendre le modèle.
+- Le rendu 3D n'a pas pu être contrôlé visuellement (pas de WebGL dans l'environnement de test) ; la géométrie des figures est testée.
+- Les vols des scénarios ENAC sont au FL360 (recoupés avec `exo_artimation.txt`) ; l'altitude est donc un paramètre d'exploration.

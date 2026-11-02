@@ -4,13 +4,11 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from artimation.conflict import list_scenarios
 from artimation.studio import aircraft_at, build_html
 from artimation.vector import analyze, density_maps
-from artimation.viz3d import density_relief_figure, spacetime_figure
 
 SCN = {s.name: s for s in list_scenarios()}
 
@@ -35,13 +33,3 @@ def test_build_html_is_self_contained_and_valid_js():
             r = subprocess.run(["node", "--check", f.name], capture_output=True, text=True)
             Path(f.name).unlink()
             assert r.returncode == 0, (i, r.stderr[:300])
-
-
-def test_3d_figures_build():
-    s = SCN["Scenario2"]
-    best = np.array([[50, 320, 35], [0, 0, 0], [0, 0, 0]], float)
-    assert len(spacetime_figure(s, best).data) >= 6
-    ac = aircraft_at(s, 0)
-    fig = density_relief_figure(density_maps(ac, 10, 7, cols=80, rows=60), ac)
-    z = fig.data[0].z
-    assert np.nanmax(z) <= 1 and np.nanmin(z) >= -1 and np.isnan(z).any()
