@@ -16,9 +16,9 @@ pas: ###
 - [x] Vérifier que `local_accuracy_mae` et `mean_ndcg` traitent correctement les attributions produites.
 
 ### Task 2: Couvrir LIME et SHAP dans tests/test_core.py
-- [ ] Ajouter les tests unitaires de `lime_explain` (modes continu et discrétisé) dans `tests/test_core.py`.
-- [ ] Ajouter les tests unitaires de `shap_values` (`tree` et `kernel`) dans `tests/test_core.py`.
-- [ ] Vérifier que `pytest tests/test_core.py` passe.
+- [x] Ajouter les tests unitaires de `lime_explain` (modes continu et discrétisé) dans `tests/test_core.py`.
+- [x] Ajouter les tests unitaires de `shap_values` (`tree` et `kernel`) dans `tests/test_core.py`.
+- [x] Vérifier que `pytest tests/test_core.py` passe.
 
 ## 1.2 Macro-scénarios et micro-régimes d'ordre 8 dans data.py et experiment.py
 
