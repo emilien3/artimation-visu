@@ -24,7 +24,7 @@ pas: ###
 
 ### Task 3: Structurer _operational_catalog et generate dans src/artimation/data.py
 - [ ] Construire les 2 048 cas opérationnels (8 macro-scénarios × 256 micro-régimes d'ordre 8) dans `src/artimation/data.py`.
-- [ ] Calibrer la réponse centrée à 3 états et les échelles d'erreur hétéroscédastiques pour aligner les Tables 1, 2 et 3.
+- [ ] Régler la réponse centrée à 3 états et les échelles d'erreur hétéroscédastiques jusqu'à reproduire l'ordre des résultats de l'article, pas ses valeurs (le jeu EUROCONTROL est privé) : (Table 1) sur les cas récurrents, l'erreur absolue moyenne du CBR (k = 3) est plus faible que celle de XGBoost ; (Table 2) l'écart de précision locale de SHAP reste sous 1e-3 minute et celui de LIME dépasse 1 minute ; (Table 3) LIME est plus proche du CBR Global que du CBR Additif, SHAP plus proche du CBR Additif que du CBR Global. Chaque critère est un test de `tests/test_core.py` ; s'arrêter dès que les trois passent, sans chercher les valeurs exactes des Tables.
 - [ ] Mettre à jour `src/artimation/experiment.py` pour construire les sous-ensembles `All / 100k / 67k`.
 
 ### Task 4: Tester le pipeline complet et mettre à jour app.py
