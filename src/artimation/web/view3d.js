@@ -1,8 +1,8 @@
-// Vue 3D : projection orthographique sur <canvas>, avec orbite (glisser), zoom (molette) et sélection/déplacement des avions dans un plan horizontal.
-// Mêmes couches que la vue 2D : seule la projection change. Axe vertical : altitude, temps ou relief de densité.
+// Orthographic canvas view with drag orbit, wheel zoom and aircraft movement in a horizontal plane.
+// Same layers as the 2D view. Vertical axis: altitude, time or density relief.
 (function (root) {
   'use strict';
-  const NMW = 120, NMH = 90, ZH = 55;            // zone de l'outil (NM) et hauteur visuelle de la boîte 3D
+  const NMW = 120, NMH = 90, ZH = 55;            // Workspace dimensions (NM) and displayed 3D box height.
   const COLORS = ['#64dfcb', '#ffb86b', '#b39dff', '#5ec8ff', '#e6e36a', '#ff8fb5', '#9aa9b5', '#c49a6c'];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -14,20 +14,20 @@
       const up = () => { this.orbit = null; }; canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
       canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoom = clamp(this.zoom * Math.exp(-e.deltaY * 0.001), 0.4, 4); this.render(); }, {passive: false});
     }
-    // ---- caméra
+    // ---- Camera
     size() {
       const r = this.cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
       if (this.cv.width !== Math.round(r.width * d) || this.cv.height !== Math.round(r.height * d)) { this.cv.width = Math.round(r.width * d); this.cv.height = Math.round(r.height * d); }
       this.w = r.width; this.h = r.height; this.dpr = d;
       this.scale = Math.min(this.w / 235, this.h / 165) * this.zoom;
     }
-    // monde (x, y vers le bas, zv visuel) -> écran + profondeur
+    // World coordinates (x, y south, displayed zv) to screen position and depth.
     proj(x, y, zv) {
       const X = x - NMW / 2, Y = -(y - NMH / 2), Z = zv - ZH / 2, ca = Math.cos(this.az), sa = Math.sin(this.az), ce = Math.cos(this.el), se = Math.sin(this.el);
       const x1 = X * ca - Y * sa, y1 = X * sa + Y * ca;
       return [this.w / 2 + x1 * this.scale, this.h / 2 - (y1 * se + Z * ce) * this.scale, y1 * ce - Z * se];
     }
-    // écran -> point (x, y) du plan horizontal de hauteur visuelle zv
+    // Screen coordinates to a horizontal-plane point at displayed height zv.
     unproject(px, py, zv) {
       const Z = zv - ZH / 2, ca = Math.cos(this.az), sa = Math.sin(this.az), ce = Math.cos(this.el), se = Math.sin(this.el);
       const x1 = (px - this.w / 2) / this.scale, y1 = ((this.h / 2 - py) / this.scale - Z * ce) / se;
@@ -35,11 +35,11 @@
     }
     local(e) { const r = this.cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 
-    // ---- mise à l'échelle verticale
+    // ---- Vertical scaling
     scaleZ() {
       const d = this.data, ax = d.axis;
       if (ax === 'time') { const tm = d.tmax; return {zv: (t, ft) => t / tm * ZH, label: 'temps (s)', ticks: [0, 0.25, 0.5, 0.75, 1].map(f => [f * tm, Math.round(f * tm) + ' s']), floor: 0, tmax: tm}; }
-      if (ax === 'relief') return {zv: () => ZH * 0.55, label: 'densité (relief)', ticks: [], floor: ZH * 0.45};
+      if (ax === 'relief') return {zv: () => ZH * 0.55, label: 'density (relief)', ticks: [], floor: ZH * 0.45};
       const lo = d.altMin, hi = d.altMax, step = hi - lo <= 8000 ? 1000 : 2000, ticks = [];
       for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push([v, 'FL' + Math.round(v / 100)]);
       return {zv: (t, ft) => (ft - lo) / (hi - lo) * ZH, label: 'altitude', ticks, floor: 0, lo, hi};
@@ -64,7 +64,7 @@
     }
     drawBox(c, sz) {
       const fl = sz.floor, corners = [[0, 0], [NMW, 0], [NMW, NMH], [0, NMH]];
-      for (let k = 0; k <= 12; k++) { // grille du plancher tous les 10 NM
+      for (let k = 0; k <= 12; k++) { // Floor grid every 10 NM.
         this.line(c, [this.proj(k * 10, 0, fl), this.proj(k * 10, NMH, fl)], 'rgba(120,160,180,.14)', 1);
         if (k <= 9) this.line(c, [this.proj(0, k * 10, fl), this.proj(NMW, k * 10, fl)], 'rgba(120,160,180,.14)', 1);
       }
@@ -74,7 +74,7 @@
         this.line(c, [...corners, corners[0]].map(p => this.proj(p[0], p[1], ZH)), 'rgba(150,190,210,.18)', 1);
       }
       c.fillStyle = '#879aaa'; c.font = '11px Inter,Arial,sans-serif'; c.textAlign = 'left';
-      // graduations verticales sur l'arête avant-gauche (la plus proche en x/y écran minimal)
+      // Vertical ticks on the front-left edge (nearest minimum screen x/y).
       const edge = [[0, 0], [NMW, 0], [NMW, NMH], [0, NMH]].map(p => ({p, s: this.proj(p[0], p[1], fl)})).sort((a, b) => a.s[0] - b.s[0])[0].p;
       for (const [val, text] of sz.ticks) { const zv = this.data.axis === 'time' ? val / sz.tmax * ZH : (val - sz.lo) / (sz.hi - sz.lo) * ZH, q = this.proj(edge[0], edge[1], zv); c.fillText(text, q[0] - 44, q[1] + 4); this.line(c, [[q[0] - 6, q[1]], [q[0], q[1]]], '#879aaa', 1); }
       const n = this.proj(NMW / 2, 0, fl); c.fillStyle = '#9bb'; c.textAlign = 'center'; c.fillText('N ↑', n[0], n[1] - 8);
@@ -104,17 +104,22 @@
       const L = d.layers, relief = d.axis === 'relief';
       d.routes.forEach((s, i) => L.routes && s && this.drawPath(c, s, 'rgba(160,175,185,.55)', 1.5, [3, 5], sz));
       d.solution.forEach((s, i) => L.solution && s && this.drawPath(c, s, d.colors[i % d.colors.length], 3.2, null, sz));
-      // aperçu de projection des avions (vecteur vitesse extrapolé sur l'horizon), comme dans la vue 2D
+      // Constant-velocity aircraft projection, as in the 2D view.
       const items = d.aircraft.map(a => ({a, p: this.proj(a.x, a.y, this.markerZ(a, sz)), z: this.markerZ(a, sz)}));
       items.sort((p, q) => q.p[2] - p.p[2]);
       for (const {a, p, z} of items) {
         const col = a.selected ? '#ffcb78' : d.colors[d.ids.indexOf(a.id) % d.colors.length] || '#64dfcb';
         if (L.zones) {
+          const radius = a.zone.radius, color = a.zone.conflict ? '#ff8c83' : a.zone.verticalOnly ? '#8ab6ff' : '#64dfcb';
           if (d.axis === 'alt' && d.sepV > 0) {
-            const zl = sz.zv(0, a.z - d.sepV), zu = sz.zv(0, a.z + d.sepV);
-            this.circle(c, a.x, a.y, d.sep, zl, col, 1); this.circle(c, a.x, a.y, d.sep, zu, col, 1);
-            for (let k = 0; k < 4; k++) { const an = k * Math.PI / 2; this.line(c, [this.proj(a.x + d.sep * Math.cos(an), a.y + d.sep * Math.sin(an), zl), this.proj(a.x + d.sep * Math.cos(an), a.y + d.sep * Math.sin(an), zu)], col, 1); }
-          } else this.circle(c, a.x, a.y, d.sep, z, col, 1);
+            const zl = sz.zv(0, a.z - a.zone.halfHeight), zu = sz.zv(0, a.z + a.zone.halfHeight);
+            this.circle(c, a.x, a.y, radius, zl, color, 1.5); this.circle(c, a.x, a.y, radius, zu, color, 1.5);
+            for (let k = 0; k < 4; k++) { const an = k * Math.PI / 2; this.line(c, [this.proj(a.x + radius * Math.cos(an), a.y + radius * Math.sin(an), zl), this.proj(a.x + radius * Math.cos(an), a.y + radius * Math.sin(an), zu)], color, 1.5); }
+          } else this.circle(c, a.x, a.y, radius, z, color, 1.5);
+          if (a.zone.conflict || a.zone.verticalOnly) {
+            c.fillStyle = color; c.font = '11px Inter,Arial,sans-serif'; c.textAlign = 'left';
+            c.fillText(a.zone.conflict ? 'CONFLICT NOW' : 'VERTICALLY SEPARATED', p[0]+14, p[1]+20);
+          }
         }
         if (L.aircraft) {
           const h = a.heading * Math.PI / 180, len = a.speed / 60 * 3, ex = a.x + Math.sin(h) * len, ey = a.y - Math.cos(h) * len;
@@ -128,9 +133,9 @@
           this.hits.push({id: a.id, kind: 'velocity', x: tip[0], y: tip[1], r: 14, zv: ez}, {id: a.id, kind: 'position', x: p[0], y: p[1], r: 17, zv: z});
         }
       }
-      (d.encounters || []).forEach(e => { // rapprochements (croisement des routes et approches minimales)
+      (d.encounters || []).forEach(e => { // Route crossings and closest approaches.
         if (!e.risk) return; const za = d.axis === 'alt' ? sz.zv(0, e.za) : d.axis === 'time' ? sz.zv((d.time + e.t) * 60, 0) : ZH * 0.55;
-        this.line(c, [this.proj(e.pa.x, e.pa.y, d.axis === 'alt' ? sz.zv(0, e.za) : za), this.proj(e.pb.x, e.pb.y, d.axis === 'alt' ? sz.zv(0, e.zb) : za)], '#ff8c83', 2, [3, 4]);
+        this.line(c, [this.proj(e.pa.x, e.pa.y, d.axis === 'alt' ? sz.zv(0, e.za) : za), this.proj(e.pb.x, e.pb.y, d.axis === 'alt' ? sz.zv(0, e.zb) : za)], '#ffcb78', 2, [3, 4]);
       });
     }
     symbol(c, p, heading, color, selected) {
@@ -140,8 +145,8 @@
     }
     drawLegend(c, d) {
       c.fillStyle = '#879aaa'; c.font = '11px Inter,Arial,sans-serif'; c.textAlign = 'left';
-      c.fillText('Glisser : tourner · Molette : zoom · Glisser un avion : le déplacer (plan horizontal)', 12, this.h - 10);
-      c.textAlign = 'right'; c.fillText(`axe vertical : ${d.axis === 'alt' ? 'altitude' : d.axis === 'time' ? 'temps' : 'relief de densité'}`, this.w - 12, this.h - 10);
+      c.fillText('Drag: rotate · Scroll: zoom · Drag an aircraft: move in a horizontal plane', 12, this.h - 10);
+      c.textAlign = 'right'; c.fillText(`vertical axis: ${d.axis === 'alt' ? 'altitude' : d.axis === 'time' ? 'time' : 'density relief'}`, this.w - 12, this.h - 10);
     }
     // ---- interaction
     hit(px, py) { let best = null, bd = 1e9; for (const h of this.hits) { const dd = Math.hypot(px - h.x, py - h.y); if (dd <= h.r && dd < bd) { best = h; bd = dd; } } return best; }

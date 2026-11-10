@@ -3,9 +3,9 @@
   const velocity = a => ({x: Math.sin(a.heading * Math.PI / 180) * a.speed / 60, y: -Math.cos(a.heading * Math.PI / 180) * a.speed / 60});
   const position = (a, minutes = 0) => { const v = velocity(a); return {...a, x:a.x + v.x * minutes, y:a.y + v.y * minutes}; };
   const cross = (a,b) => a.x*b.y-a.y*b.x;
-  // EXTENSION 3D (absente de l'outil d'origine) : instants [lo,hi] ⊂ [0,horizon] (min) où l'écart d'altitude est < sepV.
-  // Les taux verticaux étant constants et indépendants du cap, cet intervalle ne dépend pas du cap choisi.
-  // sepV falsy (0/undefined) = altitude ignorée : on retrouve exactement le modèle 2D d'origine.
+  // 3D extension: interval [lo, hi] within the horizon (minutes) where altitude difference is < sepV.
+  // Constant vertical rates make this interval independent of the selected heading.
+  // A falsy sepV (0/undefined) ignores altitude and recovers the original 2D model.
   const verticalWindow = (own,other,horizon,sepV) => {
     if(!(sepV>0)) return [0,horizon];
     const dz0=(other.z??36000)-(own.z??36000), dvz=(other.vz||0)-(own.vz||0);
@@ -42,7 +42,7 @@
       if(other.id===selectedId)continue;
       const rx=other.x-own.x, ry=other.y-own.y, distance=Math.hypot(rx,ry), v=velocity(other);
       const win=verticalWindow(own,other,horizon,sepV);
-      if(!win)continue; // séparés en altitude pendant tout l'horizon : cet intrus ne bloque aucun cap
+      if(!win)continue; // Vertically separated over the whole horizon: no heading is blocked.
       if(distance<separation){alreadyInside=true;blocked.push([0,360]);break;}
       if(horizon<=0)continue;
       const cuts=[0,360], partial=win[0]>0||win[1]<horizon;
@@ -51,7 +51,7 @@
         const ww=wx*wx+wy*wy, t=ww>1e-12?Math.max(win[0],Math.min(win[1],(rx*wx+ry*wy)/ww)):win[0];
         return Math.hypot(rx-wx*t,ry-wy*t)<separation;
       };
-      // fenêtre verticale partielle : les frontières exactes ne s'appliquent plus, on échantillonne les caps (0,05°)
+      // A partial vertical window uses heading samples at 0.05-degree intervals.
       if(partial){for(let a=0.05;a<360;a+=0.05)cuts.push(a);}
       else if(distance>0 && speed>0) {
         const alpha=Math.asin(Math.min(1,separation/distance)), base=Math.atan2(ry,rx);
@@ -83,5 +83,18 @@
     return {safe,unsafe,safeDegrees:safe.reduce((sum,[from,to])=>sum+to-from,0),alreadyInside,
       currentSafe:aircraft.every(other=>other.id===selectedId||!encounter(own,other,horizon,separation,sepV).risk)};
   }
-  const api={velocity,position,verticalWindow,encounter,analyze,headingSpace};root.FlightMath=api;if(typeof module!=='undefined')module.exports=api;
+  // Instantaneous cylinder overlap, independent of constant-vector forecasts.
+  function separationZones(aircraft, sep, sepV) {
+    const zones = aircraft.map(a => ({id:a.id, radius:sep/2, halfHeight:sepV/2, conflict:false, verticalOnly:false}));
+    const pairs = [];
+    for(let i=0;i<aircraft.length;i++) for(let j=i+1;j<aircraft.length;j++) {
+      const a=aircraft[i], b=aircraft[j], horizontal=Math.hypot(a.x-b.x,a.y-b.y), vertical=Math.abs(a.z-b.z);
+      if(horizontal>=sep) continue;
+      const conflict=sepV<=0 || vertical<sepV;
+      pairs.push({a:a.id,b:b.id,horizontal,vertical,conflict});
+      for(const k of [i,j]) { zones[k].conflict ||= conflict; zones[k].verticalOnly ||= !conflict; }
+    }
+    return {zones,pairs};
+  }
+  const api={separationZones,velocity,position,verticalWindow,encounter,analyze,headingSpace};root.FlightMath=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

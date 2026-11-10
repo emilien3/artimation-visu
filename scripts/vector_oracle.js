@@ -1,6 +1,6 @@
-// Exécute le JS de Vector (physics + density) dans un contexte vm isolé (aucun accès fichier/réseau) et imprime ses résultats en JSON.
-// Sert d'oracle : on l'appelle sur le JS ORIGINAL (vendor/) et sur le JS étendu de l'app (src/artimation/web/).
-// Usage : node scripts/vector_oracle.js <dossier_js> < entrée.json    (entrée : aircraft, horizon, separation, sepV?, density?)
+// Run Vector JS (physics + density) in an isolated VM context (no file/network access) and print JSON results.
+// Oracle for both the ORIGINAL JS (vendor/) and the extended app JS (src/artimation/web/).
+// Usage: node scripts/vector_oracle.js <js_directory> < input.json    (input: aircraft, horizon, separation, sepV?, density?)
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2];
 const ctx = vm.createContext({console, Math, Float64Array, Float32Array, Uint8ClampedArray, Int8Array, Map, Object, Number, JSON});

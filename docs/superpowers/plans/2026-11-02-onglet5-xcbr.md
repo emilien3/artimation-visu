@@ -1,6 +1,6 @@
 ---
 relais: 1
-projet: artimation-cbr
+projet: artimation-visu
 etape: Step 1 — Aligner LIME, SHAP et le générateur XCBR'22
 sections: ##
 pas: ###

@@ -1,0 +1,171 @@
+{
+  "source": "https://zenodo.org/records/7437654",
+  "authors": [
+    "Nicolas Durand",
+    "Augustin Degas",
+    "Christophe Hurter"
+  ],
+  "license": "CC-BY-4.0",
+  "traces": [
+    {
+      "scenario": 1,
+      "candidates": [
+        {
+          "generation": 2,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 64.868831
+        },
+        {
+          "generation": 2,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 64.868831
+        },
+        {
+          "generation": 3,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 129.737662
+        },
+        {
+          "generation": 3,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 129.737662
+        },
+        {
+          "generation": 3,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 194.606493
+        },
+        {
+          "generation": 3,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 194.606493
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 259.475324
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 259.475324
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 324.344154
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 324.344154
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 0,
+          "fitness": 0.002203,
+          "conflits": 389.212985
+        },
+        {
+          "generation": 4,
+          "id": 2019,
+          "i": 1,
+          "fitness": 0.002203,
+          "conflits": 389.212985
+        }
+      ],
+      "best": []
+    },
+    {
+      "scenario": 10,
+      "candidates": [
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 0,
+          "fitness": 0.001423,
+          "conflits": 100.76141
+        },
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 1,
+          "fitness": 0.001423,
+          "conflits": 82.665545
+        },
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 2,
+          "fitness": 0.001423,
+          "conflits": 183.426954
+        },
+        {
+          "generation": 1,
+          "id": 90,
+          "i": 0,
+          "fitness": 0.001423,
+          "conflits": 302.284229
+        },
+        {
+          "generation": 1,
+          "id": 90,
+          "i": 1,
+          "fitness": 0.001423,
+          "conflits": 247.996634
+        },
+        {
+          "generation": 1,
+          "id": 90,
+          "i": 2,
+          "fitness": 0.001423,
+          "conflits": 550.280863
+        }
+      ],
+      "best": [
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 0,
+          "fitness": 0.001423,
+          "conflits": 201.52282
+        },
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 1,
+          "fitness": 0.001423,
+          "conflits": 165.331089
+        },
+        {
+          "generation": 0,
+          "id": 90,
+          "i": 2,
+          "fitness": 0.001423,
+          "conflits": 366.853909
+        }
+      ]
+    }
+  ]
+}

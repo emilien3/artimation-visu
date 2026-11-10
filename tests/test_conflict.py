@@ -18,15 +18,15 @@ def test_unchanged_routes_conflict():
 
 
 def test_maneuver_geometry_matches_enac_data():
-    # Gène de l'ENAC (scénario 2, avion 0) : ils donnent le point de virage et le point de retour.
+    # ENAC gene (scenario 2, aircraft 0): it defines the turn and return points.
     s = SCN["Scenario2"]
     xy, t = maneuver_path(s.routes[0], (50, 320, 35))
     np.testing.assert_allclose(xy[1], (218.507, -157.936), atol=0.3)  # point de virage
-    np.testing.assert_allclose(xy[2], (185.160, -147.905), atol=0.3)  # fin de la déviation
+    np.testing.assert_allclose(xy[2], (185.160, -147.905), atol=0.3)  # end of the deviation
 
 
 def test_enac_first_individual_dmin():
-    # Individu 52 de la génération 0 du GA ENAC : dmin = 8.210316.
+    # Individual 52 in ENAC GA generation 0: dmin = 8.210316.
     s = SCN["Scenario2"]
     genes = np.array([[50, 320, 35], [317, 366, 20], [318, 366, 5]], float)
     assert evaluate(s, genes).dmin == pytest.approx(8.21, abs=0.3)
@@ -45,7 +45,7 @@ def test_separation_curves_and_instructions():
     curves = separation_curves(s, g)
     assert set(curves) == {(0, 1), (0, 2), (1, 2)}
     assert min(d.min() for _, d in curves.values()) == pytest.approx(evaluate(s, g).dmin, abs=0.3)
-    assert "gauche" in instructions(s, g)[0] and "inchangée" in instructions(s, g)[1]
+    assert "left" in instructions(s, g)[0] and "unchanged" in instructions(s, g)[1]
 
 
 # --- extension 3D (altitude) -------------------------------------------------------------------
@@ -55,7 +55,7 @@ from artimation.conflict import SEP_FT, SEP_NM, scenario_from_aircraft, separati
 def test_vertical_separation_removes_conflict():
     s = SCN["Scenario2"]
     same = evaluate(s, np.zeros((3, 4)))
-    stacked = evaluate(s.with_levels([36000, 37000 + 500, 39000]), np.zeros((3, 4)))  # >= 1000 ft entre chaque paire
+    stacked = evaluate(s.with_levels([36000, 37000 + 500, 39000]), np.zeros((3, 4)))  # >= 1000 ft between every pair
     assert same.conflict_s > 100 and stacked.conflict_s == 0 and stacked.dmin >= SEP_NM
     # 500 ft seulement : toujours en conflit
     assert evaluate(s.with_levels([36000, 36500, 37000]), np.zeros((3, 4))).conflict_s > 0
@@ -73,12 +73,12 @@ def test_equivalent_distance_reduces_to_horizontal_when_same_level():
 def test_level_change_maneuver_profile_and_cost():
     s = SCN["Scenario2"]
     g = np.zeros((3, 4))
-    g[1] = [0, 400, 0, 1000]  # AC002 monte de 1000 ft pendant 400 s : rampe 40 s à 1500 ft/min
+    g[1] = [0, 400, 0, 1000]  # AC002 climbs 1000 ft for 400 s: 40 s ramp at 1500 ft/min
     ev = evaluate(s, g)
     assert ev.conflict_s < evaluate(s, np.zeros((3, 4))).conflict_s and ev.n_maneuvers == 1 and ev.extra_nm == 0
     x, y, z, t = (np.asarray(v) for v in __import__("artimation.conflict", fromlist=["path_samples"]).path_samples(s.routes[1], g[1]))
     assert z.max() == pytest.approx(37000) and z[0] == pytest.approx(36000) and z[-1] == pytest.approx(36000)
-    assert state_at(s.routes[1], g[1], 20)[5] == pytest.approx(1500)  # taux vertical pendant la rampe
+    assert state_at(s.routes[1], g[1], 20)[5] == pytest.approx(1500)  # vertical rate during the ramp
 
 
 def test_free_situation_head_on_with_and_without_level_gap():
@@ -86,7 +86,7 @@ def test_free_situation_head_on_with_and_without_level_gap():
     s = scenario_from_aircraft(rows, 900)
     assert evaluate(s, np.zeros((2, 4))).dmin < 0.5
     rows[1]["fl"] = 360
-    assert evaluate(scenario_from_aircraft(rows, 900), np.zeros((2, 4))).dmin == pytest.approx(7.0, abs=0.01)  # 1000 ft = exactement la séparation
+    assert evaluate(scenario_from_aircraft(rows, 900), np.zeros((2, 4))).dmin == pytest.approx(7.0, abs=0.01)  # 1000 ft = exactly the separation threshold
     rows[1]["fl"] = 370
     assert evaluate(scenario_from_aircraft(rows, 900), np.zeros((2, 4))).conflict_s == 0
     t, dh, dv = separation_curves3d(scenario_from_aircraft(rows, 900), np.zeros((2, 4)))[(0, 1)]

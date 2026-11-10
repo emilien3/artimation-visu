@@ -4,3 +4,6 @@ artifacts/*.pkl
 artifacts/*.parquet
 .pytest_cache/
 data/zenodo/
+.DS_Store
+~$*
+*.inspect.ndjson

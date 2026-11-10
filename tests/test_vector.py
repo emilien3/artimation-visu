@@ -1,4 +1,4 @@
-"""Le portage Python est comparé au JS d'origine de l'outil ENAC (exécuté sous node), si node est installé."""
+"""Compare the Python port against the original ENAC tool JS (executed under Node), when Node is installed."""
 import json
 import shutil
 import subprocess
@@ -24,7 +24,7 @@ def oracle(aircraft, horizon, separation, density=None):
 
 
 def test_head_on_encounter():
-    a, b = Ac("A", 0, 45, 360, 90), Ac("B", 60, 45, 360, 270)  # face à face, 60 NM, 12 NM/min de rapprochement
+    a, b = Ac("A", 0, 45, 360, 90), Ac("B", 60, 45, 360, 270)  # head-on, 60 NM apart, closing at 12 NM/min
     e = encounter(a, b, 10, 5)
     assert e["t"] == pytest.approx(5.0) and e["distance"] < 1e-9 and e["risk"]
 
@@ -57,7 +57,7 @@ def test_density_matches_js():
     py = density_maps(DEMO, 10, 5, cols=80, rows=60, sigma=1.5)
     for key in ("positive", "negative", "signed"):
         ref = np.array(js[key]).reshape(60, 80)
-        # le JS classe les cellules traversées par une frontière par segment, pas au centre : écarts de bord seulement
+        # the JS classifies boundary cells by segment rather than center: edge differences only
         assert np.mean(np.abs(py[key] - ref) < 1e-6) > 0.97, key
         assert np.corrcoef(py[key].ravel(), ref.ravel())[0, 1] > 0.995, key
     assert (py["signed"] < 0).any() and (py["signed"] > 0).any()
@@ -83,14 +83,14 @@ def test_3d_vertical_separation_removes_conflict_and_window_logic():
     b2 = Ac("B", 60, 45, 360, 270, z=38000)  # 2000 ft plus haut : plus de conflit
     e = encounter3d(a, b2, 10, 5, 1000)
     assert not e["risk"] and e["separated_vertically"] and heading_space3d([a, b2], "A", 10, 5, 1000)["safe_degrees"] == pytest.approx(360)
-    # B descend vers le niveau de A à 400 ft/min : écart 2000 ft -> < 1000 ft entre t = 2,5 et 7,5 min ; approche minimale à t = 5 min
+    # B descends toward A's level at 400 ft/min: 2000 ft difference -> < 1000 ft from t = 2.5 to 7.5 min; closest approach at t = 5 min
     b3 = Ac("B", 60, 45, 360, 270, z=38000, vz=-400)
-    assert not encounter3d(a, b3, 4, 5, 1000)["risk"]  # à t = 4 min ils sont encore à 12 NM
-    assert encounter3d(a, b3, 10, 5, 1000)["risk"]  # l'approche (t = 5 min) tombe dans la fenêtre verticale
+    assert not encounter3d(a, b3, 4, 5, 1000)["risk"]  # at t = 4 min they are still 12 NM apart
+    assert encounter3d(a, b3, 10, 5, 1000)["risk"]  # closest approach (t = 5 min) lies within the vertical window
 
 
 def test_3d_analysis_flags_vertically_separated_crossings():
-    a, b = Ac("A", 0, 45, 360, 90, z=36000), Ac("B", 30, 75, 360, 0, z=38000)  # arrivent ensemble en (30, 45), 2000 ft d'écart
+    a, b = Ac("A", 0, 45, 360, 90, z=36000), Ac("B", 30, 75, 360, 0, z=38000)  # arrive together at (30, 45), 2000 ft apart vertically
     res = analyze3d([a, b], 10, 5, 1000)
     assert res and not res[0]["risk"] and res[0]["separated_vertically"] and res[0]["vertical_sep"] == pytest.approx(2000)
     assert analyze3d([a, Ac("B", 30, 75, 360, 0, z=36000)], 10, 5, 1000)[0]["risk"]

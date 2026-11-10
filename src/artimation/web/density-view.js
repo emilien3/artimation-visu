@@ -50,7 +50,7 @@
     request(aircraft,horizon,separation,sepV,time,playing){
       const roster=aircraft.map(a=>a.id).join(',');
       if(roster!==this.roster){
-        this.roster=roster;const select=this.$('density-scope');select.replaceChildren(new Option('Tous','all'));
+        this.roster=roster;const select=this.$('density-scope');select.replaceChildren(new Option('All','all'));
         aircraft.forEach(a=>select.add(new Option(a.id,a.id)));
         if(!aircraft.some(a=>a.id===this.scope))this.scope='all';select.value=this.scope;
       }

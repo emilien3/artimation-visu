@@ -1,41 +1,43 @@
-"""Géométrie et évaluation des résolutions de conflits aériens (réimplémentation du cas d'usage CD&R d'ARTIMATION).
+"""Geometry and evaluation for aircraft conflict resolution (reimplementation of ARTIMATION's CD&R use case).
 
-Un avion suit une route (waypoints en NM, heures, altitudes en ft) à vitesse constante par tronçon. Une manœuvre est un gène
-(t1, t2, alpha[, dz]) : à t1 l'avion tourne de `alpha` degrés, vole droit jusqu'à t2, puis rejoint directement son
-dernier waypoint ; en parallèle il change de niveau de `dz` ft à t1 (1 500 ft/min) et revient à son niveau initial à t2.
-Une solution = un gène par avion. Le codage horizontal a été retrouvé en recoupant les trajectoires du jeu de données ENAC
-(Zenodo 10.5281/zenodo.7437654) ; le changement de niveau est une extension du modèle.
+An aircraft follows a route (waypoints in NM, times, altitudes in ft) at constant speed on each segment. A maneuver is a gene
+(t1, t2, alpha[, dz]): at t1 the aircraft turns by `alpha` degrees, flies straight until t2, then heads directly to its
+final waypoint. In parallel, it changes level by `dz` ft at t1 (1,500 ft/min) and returns to its original level at t2.
+A solution contains one gene per aircraft. Horizontal encoding was inferred by cross-checking ENAC dataset trajectories
+(Zenodo 10.5281/zenodo.7437654). Level changes extend the model.
 
-Séparation : cylindre `sep` NM × `sep_v` ft. Toute distance renvoyée est une « distance équivalente » en NM,
-max(distance horizontale, distance verticale × sep/sep_v) : elle vaut la distance horizontale quand les avions sont au même niveau
-(donc le modèle 2D d'origine est un cas particulier) et il y a conflit si elle est inférieure à `sep`.
+Separation uses a `sep` NM × `sep_v` ft cylinder. Every returned distance is an equivalent distance in NM,
+max(horizontal distance, vertical distance × sep/sep_v). This equals horizontal distance when aircraft share a level
+(the original 2D model is therefore a special case). A conflict occurs when this distance is below `sep`.
 """
 import ast
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
-SEP_NM = 7.0  # séparation horizontale minimale visée (zone verte de la HeatMap)
-SEP_FT = 1000.0  # séparation verticale minimale (RVSM)
-FT_PER_S = 25.0  # vitesse verticale des changements de niveau (1 500 ft/min)
-DEFAULT_FL = 360  # les vols réels recoupés des scénarios 2 et 9 volent au FL360, taux vertical nul
-MAX_HEAT_CELLS = 40_000  # cellules max par avion dans la HeatMap
+SEP_NM = 7.0  # target minimum horizontal separation (green area in the heatmap)
+SEP_FT = 1000.0  # minimum vertical separation (RVSM)
+FT_PER_S = 25.0  # vertical speed for level changes (1,500 ft/min)
+DEFAULT_FL = 360  # cross-checked real flights in scenarios 2 and 9 use FL360 with zero vertical rate
+MAX_HEAT_CELLS = 40_000  # maximum heatmap cells per aircraft
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 @dataclass(frozen=True)
 class Route:
-    xy: np.ndarray  # (n, 2) en NM
-    t: np.ndarray  # (n,) secondes depuis le début du scénario
-    z: np.ndarray = None  # (n,) altitude en ft ; FL360 constant par défaut
+    xy: np.ndarray  # (n, 2), in NM
+    t: np.ndarray  # (n,), seconds since the scenario starts
+    z: np.ndarray = None  # (n,), altitude in ft; constant FL360 by default
+    enac_start: np.ndarray = None  # Exported snapshot position; enables ENAC horizontal reconstruction.
 
     def __post_init__(self):
         if self.z is None:
             object.__setattr__(self, "z", np.full(len(self.t), DEFAULT_FL * 100.0))
 
     def leg(self, t):
-        """Indice du tronçon en cours à l'instant t."""
+        """Index of the current segment at time t."""
         return int(np.clip(np.searchsorted(self.t, t, side="right") - 1, 0, len(self.t) - 2))
 
     def position(self, t):
@@ -45,7 +47,20 @@ class Route:
         return float(np.interp(t, self.t, self.z))
 
     @property
+    def playback_offset(self):
+        if self.enac_start is None:
+            return 0.0
+        speed = np.linalg.norm(self.xy[1] - self.xy[0]) / (self.t[1] - self.t[0])
+        return float(self.t[0] + np.linalg.norm(self.enac_start - self.xy[0]) / speed)
+
+    @property
+    def command_start(self):
+        return self.playback_offset if self.enac_start is not None else float(self.t[0])
+
+    @property
     def length(self):
+        if self.enac_start is not None:
+            return float(np.linalg.norm(self.xy[-1] - self.enac_start))
         return float(np.linalg.norm(np.diff(self.xy, axis=0), axis=1).sum())
 
 
@@ -68,23 +83,25 @@ class Scenario:
         return pts.min(0) - margin, pts.max(0) + margin
 
     def with_levels(self, levels_ft, rates_ft_min=None):
-        """Copie du scénario avec un niveau (ft) par avion et, en option, un taux vertical (ft/min)."""
+        """Copy the scenario with one level (ft) per aircraft and an optional vertical rate (ft/min)."""
         rates = rates_ft_min if rates_ft_min is not None else [0.0] * self.n
-        routes = [Route(r.xy, r.t, lv + rt * (r.t - r.t[0]) / 60.0) for r, lv, rt in zip(self.routes, levels_ft, rates)]
+        routes = [Route(r.xy, r.t, lv + rt * (r.t - r.t[0]) / 60.0, r.enac_start) for r, lv, rt in zip(self.routes, levels_ft, rates)]
         return Scenario(self.name, routes, self.labels)
 
     def to_dict(self):
         return dict(name=self.name, labels=list(self.ids),
-                    routes=[dict(xy=r.xy.tolist(), t=r.t.tolist(), z=r.z.tolist()) for r in self.routes])
+                    routes=[dict(xy=r.xy.tolist(), t=r.t.tolist(), z=r.z.tolist(),
+                                 enac_start=None if r.enac_start is None else r.enac_start.tolist()) for r in self.routes])
 
     @staticmethod
     def from_dict(d):
-        return Scenario(d["name"], [Route(np.array(r["xy"], float), np.array(r["t"], float), np.array(r["z"], float)) for r in d["routes"]],
+        return Scenario(d["name"], [Route(np.array(r["xy"], float), np.array(r["t"], float), np.array(r["z"], float),
+                                        None if r.get("enac_start") is None else np.array(r["enac_start"], float)) for r in d["routes"]],
                         tuple(d["labels"]))
 
 
-def scenario_from_aircraft(rows, horizon_s=1800.0, name="Situation libre"):
-    """Scénario à partir d'avions en route directe : rows = [dict(id, x, y, heading, speed, fl, vz)] (repère y vers le nord)."""
+def scenario_from_aircraft(rows, horizon_s=1800.0, name="Custom scenario"):
+    """Build a scenario from aircraft on direct routes: rows = [dict(id, x, y, heading, speed, fl, vz)] (north-positive y)."""
     routes = []
     for r in rows:
         h, v = np.radians(r["heading"]), r["speed"] / 3600.0  # NM/s
@@ -99,36 +116,46 @@ def _hms(s):
     return h * 3600 + m * 60 + sec
 
 
-def load_scenario(path):
-    """Lit un fichier `Ga-Trajectory-ScenarioN.txt` (une liste Python de ((x, y), 'hh:mm:ss') par avion)."""
+def load_scenario(path, *, enac=False):
+    """Read a `Ga-Trajectory-ScenarioN.txt` file (one Python list of ((x, y), 'hh:mm:ss') per aircraft)."""
     lines = [ast.literal_eval(ln) for ln in Path(path).read_text().splitlines() if ln.strip()]
     t0 = min(_hms(w[0][1]) for w in lines)
     routes = [Route(np.array([p for p, _ in w], float), np.array([_hms(h) - t0 for _, h in w], float)) for w in lines]
+    if enac:
+        starts = json.loads((DATA_DIR / "scenarios/enac-starts.json").read_text())[Path(path).stem]
+        if len(starts) != len(routes):
+            raise ValueError("ENAC snapshot must contain one position per aircraft")
+        for i, r in enumerate(routes):
+            speed = np.linalg.norm(r.xy[1] - r.xy[0]) / (r.t[1] - r.t[0])
+            times = r.t[0] + np.r_[0, np.cumsum(np.linalg.norm(np.diff(r.xy, axis=0), axis=1) / speed)]
+            routes[i] = Route(r.xy, times, enac_start=np.array(starts[i], float))
     return Scenario(Path(path).stem.replace("Ga-Trajectory-", ""), routes)
 
 
-def list_scenarios():
+def list_scenarios(*, enac=False):
     files = sorted((DATA_DIR / "scenarios").glob("Ga-Trajectory-Scenario*.txt"), key=lambda p: int(''.join(c for c in p.stem if c.isdigit())))
-    return [load_scenario(f) for f in files]
+    return [load_scenario(f, enac=enac) for f in files]
 
 
 def _g(gene):
-    """Gène à 4 composantes (t1, t2, alpha, dz) ; les gènes à 3 composantes (jeu ENAC) n'ont pas de changement de niveau."""
+    """Four-component gene (t1, t2, alpha, dz); three-component genes (ENAC dataset) have no level change."""
     return (*gene, 0.0)[:4] if len(gene) < 4 else tuple(gene[:4])
 
 
 def _horizontal_active(route, gene):
     t1, t2, alpha, _ = _g(gene)
-    return not (alpha == 0 or t2 <= t1 or t1 < route.t[0] or t1 >= route.t[-1])
+    return not (alpha == 0 or t2 <= t1 or t1 + 1e-9 < route.command_start or t1 >= route.t[-1])
 
 
 def _vertical_active(route, gene):
     t1, t2, _, dz = _g(gene)
-    return not (dz == 0 or t2 <= t1 or t1 < route.t[0] or t1 >= route.t[-1])
+    return not (dz == 0 or t2 <= t1 or t1 + 1e-9 < route.command_start or t1 >= route.t[-1])
 
 
 def maneuver_path(route, gene):
-    """Polyligne horizontale (xy, t) d'un avion après application du gène."""
+    """Aircraft horizontal polyline (xy, t) after applying its gene."""
+    if route.enac_start is not None:
+        return _enac_path(route, gene)
     if not _horizontal_active(route, gene):
         return route.xy, route.t
     t1, t2, alpha, _ = _g(gene)
@@ -146,35 +173,71 @@ def maneuver_path(route, gene):
     return xy, t
 
 
+def _enac_path(route, gene):
+    """Reconstruct the default Zenodo export: constant speed and 2.5° angular pruning.
+
+    Genes use the original scenario clock; playback starts at the exported snapshot.
+    This is an inference from all 151,500 candidates, not the original solver source.
+    """
+    speed = np.linalg.norm(route.xy[1] - route.xy[0]) / (route.t[1] - route.t[0])
+    points = [route.enac_start]
+    final = route.xy[-1]
+    if _horizontal_active(route, gene):
+        t1, t2, alpha, _ = _g(gene)
+        # Retiming can move an exact waypoint boundary by a few floating-point ulps.
+        k = route.leg(t1 + 1e-9)
+        leg = route.xy[k + 1] - route.xy[k]
+        heading = np.arctan2(leg[1], leg[0]) + np.radians(alpha)
+        p = route.enac_start if abs(t1 - route.command_start) < 1e-8 else route.position(t1)
+        q = p + speed * (t2 - t1) * np.array([np.cos(heading), np.sin(heading)])
+
+        def angle(u, v):
+            if np.linalg.norm(u) < 1e-12 or np.linalg.norm(v) < 1e-12:
+                return 0.0
+            return np.degrees(np.arctan2(abs(u[0] * v[1] - u[1] * v[0]), u @ v))
+
+        # Compare rays from the last retained point, not the turn angle at p or q.
+        if angle(p - points[-1], q - points[-1]) >= 2.5:
+            points.append(p)
+        if angle(q - points[-1], final - points[-1]) >= 2.5:
+            points.append(q)
+    points.append(final)
+    xy = np.array(points)
+    return xy, np.r_[0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1) / speed)]
+
+
 def vertical_profile(route, gene):
-    """Profil d'altitude (tz, z) : niveau de la route + palier de `dz` ft entre t1 et t2, rampes à 1 500 ft/min."""
+    """Altitude profile (tz, z): route level plus a `dz` ft offset between t1 and t2, with ramps at 1,500 ft/min."""
+    base_t = route.t - route.playback_offset
     if not _vertical_active(route, gene):
-        return route.t, route.z
+        return base_t, route.z
     t1, t2, _, dz = _g(gene)
+    t1 = max(0.0, t1 - route.playback_offset) if route.enac_start is not None else t1
+    t2 -= route.playback_offset
     ramp = abs(dz) / FT_PER_S
     tb = t1 + ramp
     tc = max(t2, tb)
     knots = [t1, tb, tc, tc + ramp]
-    times = np.unique(np.concatenate([route.t, knots]))
-    return times, np.interp(times, route.t, route.z) + np.interp(times, knots, [0, dz, dz, 0], left=0, right=0)
+    times = np.unique(np.concatenate([base_t, knots]))
+    return times, np.interp(times, base_t, route.z) + np.interp(times, knots, [0, dz, dz, 0], left=0, right=0)
 
 
 def full_path(route, gene):
-    """(xy, t, tz, z) : trajectoire horizontale et profil d'altitude."""
+    """(xy, t, tz, z): horizontal trajectory and altitude profile."""
     xy, t = maneuver_path(route, gene)
     tz, z = vertical_profile(route, gene)
     return xy, t, tz, z
 
 
 def path_samples(route, gene):
-    """Points (x, y, z, t) de la trajectoire, à chaque instant où elle change de direction ou de pente verticale."""
+    """Trajectory points (x, y, z, t) at each change in direction or vertical slope."""
     xy, t, tz, z = full_path(route, gene)
-    ts = np.unique(np.concatenate([t, tz[tz <= t[-1]]]))
+    ts = np.unique(np.concatenate([t, tz[(tz >= t[0]) & (tz <= t[-1])]]))
     return np.interp(ts, t, xy[:, 0]), np.interp(ts, t, xy[:, 1]), np.interp(ts, tz, z), ts
 
 
 def state_at(route, gene, t):
-    """(x, y, z ft, vitesse kt, cap ° horaire depuis le nord, taux vertical ft/min) à l'instant t, ou None si l'avion n'est pas en vol."""
+    """(x, y, z ft, speed kt, heading ° clockwise from north, vertical rate ft/min) at time t, or None when not in flight."""
     xy, ts, tz, z = full_path(route, gene)
     if not (ts[0] <= t <= ts[-1]):
         return None
@@ -191,11 +254,11 @@ def _interp2(ts, xy, t):
 
 
 def _pair_stats(a, b, sep, sep_v):
-    """(distance équivalente minimale en NM, secondes en conflit) entre deux trajectoires (xy, t, tz, z), exacts.
+    """Exact (minimum equivalent distance in NM, seconds in conflict) between two trajectories (xy, t, tz, z).
 
-    Conflit : distance horizontale < sep ET écart d'altitude < sep_v. Entre deux instants de rupture le mouvement relatif est
-    linéaire ; la distance équivalente max(|r|, c|dz|) est convexe, son minimum est à une extrémité, au minimum de |r|, au
-    passage de dz par 0 ou à l'égalité |r| = c|dz| (racines d'un trinôme).
+    Conflict: horizontal distance < sep AND altitude difference < sep_v. Relative motion is linear between knots.
+    Equivalent distance max(|r|, c|dz|) is convex. Its minimum occurs at an endpoint, at the minimum of |r|,
+    where dz crosses zero, or where |r| = c|dz| (roots of a quadratic).
     """
     (xa, ta, tza, za), (xb, tb, tzb, zb) = a, b
     lo, hi = max(ta[0], tb[0]), min(ta[-1], tb[-1])
@@ -221,7 +284,7 @@ def _pair_stats(a, b, sep, sep_v):
             cand.append(np.clip(np.where(np.abs(qa) > 1e-12, (-qb + sg * sq) / np.where(np.abs(qa) > 1e-12, qa, 1), lin), 0, dt))
     f = lambda tau: np.maximum(np.linalg.norm(r0 + dv * tau[:, None], axis=1), c * np.abs(z0 + dzv * tau))
     dmin = float(min(f(tau).min() for tau in cand))
-    # secondes en conflit : intervalle où |r| < sep, intersecté avec celui où |dz| < sep_v
+    # seconds in conflict: intersect the |r| < sep interval with the |dz| < sep_v interval
     b_ = 2 * bb
     cc = r2 - sep ** 2
     disc = b_ ** 2 - 4 * aa * cc
@@ -241,23 +304,36 @@ def _pair_stats(a, b, sep, sep_v):
 
 @dataclass
 class Evaluation:
-    pair_dmin: np.ndarray  # (A, A) distance minimale entre chaque paire
-    conflict_s: float  # secondes cumulées sous la séparation
-    extra_nm: float  # longueur ajoutée par les manœuvres
+    pair_dmin: np.ndarray  # (A, A), minimum distance for each pair
+    conflict_s: float  # cumulative seconds below separation
+    extra_nm: float  # distance added by maneuvers
     n_maneuvers: int
     fitness: float
 
     @property
     def dmin(self):
-        return float(self.pair_dmin[np.triu_indices_from(self.pair_dmin, 1)].min())
+        return float(self.pair_dmin[np.triu_indices_from(self.pair_dmin, 1)].min(initial=np.inf))
 
 
-# Pondérations de la fitness : conflits (dominant) > longueur > nombre de manœuvres, + un coût par 1 000 ft de changement de niveau.
-W_CONFLICT, W_LENGTH, W_MANEUVER, W_ALT = 1.0, 0.02, 0.05, 0.04
+# Conflict-free solutions occupy (0.5, 1]; other solutions occupy (0, 0.5).
+DEFAULT_WEIGHTS = dict(conflict=1.0, shortfall=10.0, length=0.02, maneuver=0.05, altitude=0.04)
 
 
-def evaluate(scn, genes, sep=SEP_NM, sep_v=SEP_FT):
-    """Évalue une solution (genes : (A, 3) ou (A, 4)). fitness ∈ (0, 1], à maximiser ; 1 = rien à changer et aucun conflit."""
+def fitness_weights(weights=None):
+    if weights is not None and (not isinstance(weights, dict) or set(weights) - DEFAULT_WEIGHTS.keys()):
+        raise ValueError("Invalid fitness weights")
+    w = {**DEFAULT_WEIGHTS, **(weights or {})}
+    if any(not isinstance(v, (int, float)) or not np.isfinite(v) or v < 0 for v in w.values()):
+        raise ValueError("Fitness weights must be finite and nonnegative")
+    return w
+
+
+def evaluate(scn, genes, sep=SEP_NM, sep_v=SEP_FT, weights=None):
+    """Evaluate a solution (genes: (A, 3) or (A, 4)). Maximize fitness ∈ (0, 1]; 1 means no changes and no conflict."""
+    w = fitness_weights(weights)
+    genes = np.asarray(genes, dtype=float)
+    if genes.ndim != 2 or genes.shape[0] != scn.n or genes.shape[1] not in (3, 4) or not np.isfinite(genes).all():
+        raise ValueError("Each aircraft requires a finite gene with 3 or 4 components")
     paths = [full_path(r, g) for r, g in zip(scn.routes, genes)]
     n = scn.n
     pair = np.full((n, n), np.inf)
@@ -268,24 +344,28 @@ def evaluate(scn, genes, sep=SEP_NM, sep_v=SEP_FT):
             pair[i, j] = pair[j, i] = d
             conflict += c
     extra = sum(max(0.0, np.linalg.norm(np.diff(xy, axis=0), axis=1).sum() - r.length) for (xy, *_), r in zip(paths, scn.routes))
-    h_act = [_horizontal_active(r, g) for r, g in zip(scn.routes, genes)]
+    h_act = [len(p[0]) > 2 if r.enac_start is not None else _horizontal_active(r, g)
+             for r, g, p in zip(scn.routes, genes, paths)]
     v_act = [_vertical_active(r, g) for r, g in zip(scn.routes, genes)]
     n_man = sum(h or v for h, v in zip(h_act, v_act))
     alt = sum(abs(_g(g)[3]) for g, v in zip(genes, v_act) if v)
     finite = pair[np.isfinite(pair)]
-    shortfall = max(0.0, sep - (finite.min() if finite.size else sep))  # gradient pour guider l'AG vers la zone sûre
-    penalty = W_CONFLICT * (conflict + 10 * shortfall) + W_LENGTH * extra + W_MANEUVER * n_man + W_ALT * alt / 1000.0
-    return Evaluation(pair, conflict, float(extra), n_man, 1.0 / (1.0 + penalty))
+    shortfall = max(0.0, sep - (finite.min() if finite.size else sep))  # gradient to guide the GA toward the safe region
+    penalty = w["conflict"] * conflict + w["shortfall"] * shortfall + w["length"] * extra + w["maneuver"] * n_man + w["altitude"] * alt / 1000.0
+    safe = conflict == 0 and shortfall == 0
+    score = 0.5 / (1.0 + penalty)
+    fitness = max(0.5 + np.finfo(float).eps, 0.5 + score) if safe else min(0.5 - np.finfo(float).eps, score)
+    return Evaluation(pair, conflict, float(extra), n_man, fitness)
 
 
 def heat_layers(scn, genes_all, pair_dmin_all, sep=SEP_NM, cell=1.0, step=0.5):
-    """Cartes de densité HeatMap : pour chaque avion, où passent les modifications sûres (vert) ou dangereuses (rouge).
+    """Heatmap density layers: where each aircraft's safe (green) or unsafe (red) modified trajectories pass.
 
-    genes_all : (N, A, 3), pair_dmin_all : (N, A, A). Une modification de l'avion i est sûre si sa
-    séparation minimale avec tous les autres avions est >= sep.
+    genes_all: (N, A, 3), pair_dmin_all: (N, A, A). A modification for aircraft i is safe when its
+    minimum separation from every other aircraft is >= sep.
     """
     lo, hi = scn.bounds()
-    cell = max(cell, float(np.sqrt(np.prod(hi - lo) / MAX_HEAT_CELLS)))  # grille bornée : la cellule grossit avec l'étendue
+    cell = max(cell, float(np.sqrt(np.prod(hi - lo) / MAX_HEAT_CELLS)))  # bounded grid: cells grow with the map extent
     step = max(step, cell / 2)
     nx, ny = (np.ceil((hi - lo) / cell)).astype(int)
     safe = np.zeros((scn.n, ny, nx))
@@ -299,17 +379,18 @@ def heat_layers(scn, genes_all, pair_dmin_all, sep=SEP_NM, cell=1.0, step=0.5):
             ix, iy = ((x - lo[0]) / cell).astype(int), ((y - lo[1]) / cell).astype(int)
             ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
             others = np.delete(pd_[i], i)
-            (safe if others.min() >= sep else unsafe)[i][iy[ok], ix[ok]] += step
+            target = (safe if others.min(initial=np.inf) >= sep else unsafe)[i]
+            np.add.at(target, (iy[ok], ix[ok]), np.minimum(step, s[-1] - ss[ok]))
     return dict(lo=lo, hi=hi, cell=cell, safe=safe, unsafe=unsafe)
 
 
 def separation_curves(scn, genes, dt=1.0):
-    """Distance horizontale entre chaque paire d'avions au cours du temps -> {(i, j): (t, d)}."""
+    """Horizontal distance over time for each aircraft pair -> {(i, j): (t, d)}."""
     return {k: (t, dh) for k, (t, dh, _) in separation_curves3d(scn, genes, dt).items()}
 
 
 def separation_curves3d(scn, genes, dt=1.0):
-    """{(i, j): (t, distance horizontale NM, écart d'altitude ft)} sur la période où les deux avions volent."""
+    """{(i, j): (t, horizontal distance NM, altitude difference ft)} over the common flight interval."""
     paths = [full_path(r, g) for r, g in zip(scn.routes, genes)]
     out = {}
     for i in range(scn.n):
@@ -323,19 +404,26 @@ def separation_curves3d(scn, genes, dt=1.0):
 
 
 def instructions(scn, genes):
-    """Consignes en français pour chaque avion manœuvrant."""
+    """English instructions for each aircraft."""
     out = []
     for i, (g, r) in enumerate(zip(genes, scn.routes)):
         t1, t2, a, dz = _g(g)
         h, v = _horizontal_active(r, g), _vertical_active(r, g)
         name = scn.ids[i]
-        if not (h or v):
-            out.append(f"{name} : route inchangée.")
+        if not (h or v) and r.enac_start is None:
+            out.append(f"{name}: route unchanged.")
             continue
         parts = []
-        if h:
-            parts.append(f"virer de {abs(a):.0f}° à {'gauche' if a > 0 else 'droite'} à t+{t1:.0f} s, puis rejoindre directement le dernier point de la route à t+{t2:.0f} s")
+        if r.enac_start is not None:
+            _, times = maneuver_path(r, g)
+            turns = " and ".join(f"t+{t:.1f} s" for t in times[1:-1])
+            parts.append(f"follow the reconstructed ENAC path; turn at {turns}, then fly directly to the final waypoint"
+                         if turns else "fly directly to the final waypoint (ENAC path simplification)")
+        elif h:
+            parts.append(f"turn {abs(a):.0f}° {'left' if a > 0 else 'right'} at t+{t1:.0f} s, then head directly to the final waypoint at t+{t2:.0f} s")
         if v:
-            parts.append(f"{'monter' if dz > 0 else 'descendre'} de {abs(dz):.0f} ft à t+{t1:.0f} s, puis revenir au niveau initial à t+{t2:.0f} s")
-        out.append(f"{name} : " + " ; ".join(parts) + ".")
+            start = t1 - r.playback_offset
+            back = max(t2, t1 + abs(dz) / FT_PER_S) - r.playback_offset
+            parts.append(f"{'climb' if dz > 0 else 'descend'} {abs(dz):.0f} ft at t+{start:.0f} s, then start returning to the original route altitude at t+{back:.0f} s")
+        out.append(f"{name}: " + "; ".join(parts) + ".")
     return out

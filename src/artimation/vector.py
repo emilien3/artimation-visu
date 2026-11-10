@@ -1,9 +1,9 @@
-"""Portage Python de « Vector — Aircraft crossing studio » (outil ENAC / C. Hurter, hors ligne, JS sans dépendance).
+"""Python port of Vector — Aircraft crossing studio (ENAC / C. Hurter, offline, dependency-free JS).
 
-Portage fidèle de `physics.js` (rencontres, espace des caps sûrs) et de `density.js` (cartes de densité
-positive/négative). Repère de l'outil : x vers la droite, y vers le BAS (écran), cap en degrés dans le sens horaire
-depuis le haut (nord), vitesse en nœuds, distances en NM, temps en minutes. Validé contre le JS d'origine
-(tests/test_vector.py, exécuté sous node).
+Faithful port of `physics.js` (encounters, safe heading space) and `density.js` (positive/negative density maps).
+Tool coordinates: x points right, y points DOWN (screen), headings are degrees clockwise from the top (north),
+speed is in knots, distances in NM and time in minutes. Validated against the original JS
+(tests/test_vector.py, executed under Node).
 """
 from dataclasses import dataclass, replace
 from math import acos, asin, atan2, cos, degrees, hypot, radians, sin, sqrt
@@ -20,13 +20,13 @@ class Ac:
     x: float
     y: float
     speed: float  # kt
-    heading: float  # ° horaire depuis le nord
-    z: float = 36000.0  # altitude en ft (extension 3D ; ignorée par les fonctions 2D)
-    vz: float = 0.0  # taux vertical en ft/min (extension 3D)
+    heading: float  # ° clockwise from north
+    z: float = 36000.0  # altitude in ft (3D extension; ignored by 2D functions)
+    vz: float = 0.0  # vertical rate in ft/min (3D extension)
 
 
 def velocity(a):
-    """Vitesse en NM/min."""
+    """Velocity in NM/min."""
     return sin(radians(a.heading)) * a.speed / 60, -cos(radians(a.heading)) * a.speed / 60
 
 
@@ -36,7 +36,7 @@ def position(a, minutes=0.0):
 
 
 def encounter(a, b, horizon, separation):
-    """Approche minimale de deux avions à vitesse constante sur [0, horizon] + point de croisement des routes."""
+    """Closest approach of two constant-velocity aircraft over [0, horizon], plus their route crossing point."""
     va, vb = velocity(a), velocity(b)
     d, rv = (b.x - a.x, b.y - a.y), (vb[0] - va[0], vb[1] - va[1])
     vv = rv[0] ** 2 + rv[1] ** 2
@@ -69,10 +69,10 @@ def _heading(x, y):
 
 
 def heading_space(aircraft, selected_id, horizon, separation):
-    """Intervalles de caps sûrs / en conflit pour `selected_id` (autres avions en route directe, virage instantané).
+    """Safe/conflicting heading intervals for `selected_id` (other aircraft fly directly, with instantaneous turns).
 
-    On découpe le cercle des caps en chaque frontière possible (tangence au disque de séparation d'un intrus, contact
-    exactement à l'horizon), on teste chaque intervalle ouvert et on réunit les intervalles bloqués.
+    Split the heading circle at every possible boundary (tangency to another aircraft's separation disk, contact
+    exactly at the horizon), test each open interval, then merge blocked intervals.
     """
     own = next((a for a in aircraft if a.id == selected_id), None)
     if own is None:
@@ -141,7 +141,7 @@ def heading_space(aircraft, selected_id, horizon, separation):
 
 def gaussian_kernel(sigma_cells):
     if sigma_cells < 0:
-        raise ValueError("La largeur du noyau doit être positive.")
+        raise ValueError("Kernel width must be nonnegative.")
     if sigma_cells == 0:
         return np.array([1.0])
     radius = int(np.ceil(3 * sigma_cells))
@@ -152,13 +152,13 @@ def gaussian_kernel(sigma_cells):
 def _smooth(m, kx, ky):
     if len(kx) == 1 and len(ky) == 1:
         return m.copy()
-    return convolve1d(convolve1d(m, kx, axis=1, mode="constant"), ky, axis=0, mode="constant")  # remplissage nul, comme le JS
+    return convolve1d(convolve1d(m, kx, axis=1, mode="constant"), ky, axis=0, mode="constant")  # zero padding, matching the JS
 
 
 def density_maps(aircraft, horizon=10.0, separation=5.0, cols=160, rows=120, width=120.0, height=90.0, sigma=1.5, ids=None):
-    """Cartes de densité de l'outil : pour chaque avion, chaque cellule à portée (vitesse × horizon) est « positive » si le
-    cap qui y mène est sans conflit, « négative » (valeur = nombre d'intrus en conflit) sinon. Somme sur les avions,
-    lissage gaussien, puis priorité stricte : un négatif, même faible, l'emporte sur tout positif.
+    """Tool density maps: for each aircraft, a cell within reach (speed × horizon) is positive when its heading
+    is conflict-free, otherwise negative (value = number of conflicting aircraft). Sum over aircraft,
+    apply Gaussian smoothing, then give strict priority to negative values, however small, over positive ones.
     """
     dx, dy = width / cols, height / rows
     kx, ky = gaussian_kernel(sigma / dx), gaussian_kernel(sigma / dy)
@@ -183,13 +183,13 @@ def density_maps(aircraft, horizon=10.0, separation=5.0, cols=160, rows=120, wid
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Extension 3D (altitude) : non présente dans l'outil d'origine, qui suppose un seul niveau.
-# Conflit = distance horizontale < sep ET écart d'altitude < sep_v. Les vitesses verticales étant constantes et indépendantes du
-# cap, l'ensemble des instants où |dz| < sep_v est un intervalle [t_lo, t_hi] qui ne dépend pas du cap choisi : un cap est en
-# conflit si la distance horizontale minimale sur cet intervalle est < sep. Sans écart d'altitude, on retrouve le modèle 2D.
+# 3D extension (altitude): absent from the original tool, which assumes a single level.
+# Conflict = horizontal distance < sep AND altitude difference < sep_v. Vertical rates are constant and independent of heading.
+# Times where |dz| < sep_v form an interval [t_lo, t_hi] independent of the chosen heading. A heading conflicts when the minimum
+# horizontal distance over that interval is < sep. With no altitude difference, this reduces to the 2D model.
 # ---------------------------------------------------------------------------------------------------------------------
 def vertical_window(own, other, horizon, sep_v):
-    """Intervalle [t_lo, t_hi] ⊂ [0, horizon] (min) où l'écart d'altitude est < sep_v, ou None."""
+    """Interval [t_lo, t_hi] ⊂ [0, horizon] (min) where the altitude difference is < sep_v, or None."""
     dz0, dvz = other.z - own.z, other.vz - own.vz  # ft, ft/min
     if sep_v is None or sep_v <= 0:
         return 0.0, horizon
@@ -201,7 +201,7 @@ def vertical_window(own, other, horizon, sep_v):
 
 
 def conflict_counts(own, aircraft, headings, horizon, separation, sep_v):
-    """Nombre d'intrus en conflit pour chaque cap de `headings` (tableau quelconque, en degrés)."""
+    """Number of conflicting aircraft for each heading in `headings` (arbitrary-shaped array, in degrees)."""
     h = np.radians(np.asarray(headings, float))
     vox, voy = np.sin(h) * own.speed / 60, -np.cos(h) * own.speed / 60
     counts = np.zeros(h.shape)
@@ -214,7 +214,7 @@ def conflict_counts(own, aircraft, headings, horizon, separation, sep_v):
         lo, hi = win
         vx, vy = velocity(other)
         rx, ry = other.x - own.x, other.y - own.y
-        wx, wy = vx - vox, vy - voy  # vitesse relative de l'intrus
+        wx, wy = vx - vox, vy - voy  # other aircraft's relative velocity
         ww = wx * wx + wy * wy
         t = np.clip(np.where(ww > 1e-12, -(rx * wx + ry * wy) / np.where(ww > 1e-12, ww, 1), lo), lo, hi)
         counts += np.hypot(rx + wx * t, ry + wy * t) < separation
@@ -222,7 +222,7 @@ def conflict_counts(own, aircraft, headings, horizon, separation, sep_v):
 
 
 def encounter3d(a, b, horizon, separation, sep_v):
-    """Comme `encounter`, avec l'altitude : `risk` = conflit dans le cylindre ; `vertical_sep` = écart d'altitude à l'approche (ft)."""
+    """Like `encounter`, with altitude: `risk` means a cylindrical conflict; `vertical_sep` is the altitude difference at approach (ft)."""
     e = encounter(a, b, horizon, separation)
     va, vb = velocity(a), velocity(b)
     win = vertical_window(a, b, horizon, sep_v)
@@ -247,7 +247,7 @@ def analyze3d(aircraft, horizon, separation, sep_v):
 
 
 def heading_space3d(aircraft, selected_id, horizon, separation, sep_v, step=0.05):
-    """Intervalles de caps sûrs/en conflit avec altitude, échantillonnés au `step` degré (0,05° par défaut)."""
+    """Safe/conflicting heading intervals with altitude, sampled every `step` degrees (0.05° by default)."""
     own = next((a for a in aircraft if a.id == selected_id), None)
     if own is None:
         return dict(safe=[], unsafe=[], safe_degrees=0.0, current_safe=False, already_inside=False)
@@ -269,7 +269,7 @@ def heading_space3d(aircraft, selected_id, horizon, separation, sep_v, step=0.05
 
 
 def density_maps3d(aircraft, horizon=10.0, separation=5.0, sep_v=1000.0, cols=160, rows=120, width=120.0, height=90.0, sigma=1.5, ids=None):
-    """Même carte que `density_maps`, mais un cap est en conflit seulement s'il l'est dans le cylindre (altitude comprise)."""
+    """Like `density_maps`, but a heading conflicts only within the separation cylinder (including altitude)."""
     dx, dy = width / cols, height / rows
     kx, ky = gaussian_kernel(sigma / dx), gaussian_kernel(sigma / dy)
     xs, ys = (np.arange(cols) + 0.5) * dx, (np.arange(rows) + 0.5) * dy

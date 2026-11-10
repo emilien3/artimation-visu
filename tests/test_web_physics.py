@@ -1,4 +1,4 @@
-"""Le JS étendu de l'app (src/artimation/web) est comparé (1) au JS ORIGINAL de l'ENAC sans altitude, (2) au portage Python avec altitude."""
+"""Compare extended app JS (src/artimation/web) against (1) ORIGINAL ENAC JS without altitude and (2) the Python port with altitude."""
 import json
 import shutil
 import subprocess

@@ -1,4 +1,4 @@
-// Mini-courbes sur <canvas>, sans dépendance.
+// Small canvas charts without dependencies.
 (function (root) {
   'use strict';
   function lineChart(canvas, series, opt) {
@@ -8,7 +8,7 @@
     const c = canvas.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, w, 220);
     const pad = {l: 44, r: 10, t: 10, b: 26}, W = w - pad.l - pad.r, H = 220 - pad.t - pad.b;
     const pts = series.flatMap(s => s.ys.map((y, i) => [s.xs[i], y])).filter(p => Number.isFinite(p[1]));
-    if (!pts.length) { c.fillStyle = '#879aaa'; c.font = '12px Inter,Arial'; c.fillText('Pas de données', pad.l + 10, 60); return; }
+    if (!pts.length) { c.fillStyle = '#879aaa'; c.font = '12px Inter,Arial'; c.fillText('No data', pad.l + 10, 60); return; }
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]).concat(o.hlines.map(l => l.y));
     const x0 = Math.min(...xs), x1 = Math.max(...xs) || 1, y0 = o.ymin ?? Math.min(...ys, 0), y1 = (o.ymax ?? Math.max(...ys) * 1.05) || 1;
     const X = x => pad.l + (x - x0) / ((x1 - x0) || 1) * W, Y = y => pad.t + H - (y - y0) / ((y1 - y0) || 1) * H;
