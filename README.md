@@ -46,10 +46,7 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 - [Demo guide, dataset schema and method formulas](docs/STARTUP_DEMO.md)
 - [Formulas explained](docs/FORMULAS_EXPLAINED.md) · [PDF](docs/output/pdf/artimation_visu_formulas_guide_en.pdf)
 - [Presentation, 7 slides](docs/output/artimation_visu_demo_en_formulas.pptx)
-- [Scientific and technical audit](docs/AUDIT_SCIENTIFIQUE.md)
-- [ENAC reconstruction audit](docs/ENAC_RECONSTRUCTION.md)
-- [Comparison with the 2022 paper](docs/PAPER_2022_COMPARISON.md)
-- [Architecture and the NextQCM source](docs/NEXTQCM_ANALYSIS.md)
+- [Audit: sources, comparison with the papers, ENAC validation, architecture](docs/AUDIT.md)
 
 ## Layout
 
