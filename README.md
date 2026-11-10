@@ -31,7 +31,7 @@ node scripts/export_exploration.cjs                       # GA and annealing
 node scripts/export_exploration.cjs --methods all --out docs/output/artifacts/five-methods
 ```
 
-Existing files are never overwritten. Schema and formulas are in [STARTUP_DEMO.md](docs/STARTUP_DEMO.md).
+Existing files are never overwritten. Formulas are in [FORMULAS_EXPLAINED.md](docs/FORMULAS_EXPLAINED.md).
 
 ## Tests
 
@@ -43,7 +43,6 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 
 ## Documentation
 
-- [Demo guide, dataset schema and method formulas](docs/STARTUP_DEMO.md)
 - [Formulas explained](docs/FORMULAS_EXPLAINED.md) · [PDF](docs/output/pdf/artimation_visu_formulas_guide_en.pdf)
 - [Presentation, 7 slides](docs/output/artimation_visu_demo_en_formulas.pptx)
 - [Audit: sources, comparison with the papers, ENAC validation, architecture](docs/AUDIT.md)
