@@ -62,9 +62,3 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 | `data/scenarios/` | Ten ENAC scenarios adapted from 2016 traffic |
 | `scripts/` | Dataset export and audits |
 | `docs/output/` | Presentations, PDF and audit artifacts |
-
-## Limits and license
-
-The papers do not specify the exact ARTIMATION solver configuration. Fitness weights, GA operators and altitude behavior are modeling choices. The GA gives no guarantee of global optimality, and the papers' Storyboard is absent.
-
-Datasets are CC BY 4.0. The archived Vector code has no explicit license identified in the audit: clarify redistribution permission with its author before reusing it.
