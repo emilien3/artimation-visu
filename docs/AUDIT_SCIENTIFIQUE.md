@@ -1,6 +1,6 @@
 # Scientific and technical audit of Artimation Visu
 
-Date: 5 November 2026. Scope: the existing working tree, its archived Vector source, the supplied 2024 paper, accessible related publications, and the locally available ENAC datasets. Pre-existing uncommitted changes were retained; no commit or publication was made.
+Date: 5 November 2026. Scope: the existing working tree, the original Vector source (since removed from the repository), the supplied 2024 paper, accessible related publications, and the locally available ENAC datasets. Pre-existing uncommitted changes were retained; no commit or publication was made.
 
 **Follow-up:** the distance discrepancies recorded below are now resolved by [ENAC trajectory reconstruction](ENAC_RECONSTRUCTION.md): zero disagreements on all 151,500 candidates. The follow-up also explains cumulative export counters and their lack of observed effect on recorded fitness. The results below are retained as the initial audit baseline.
 
@@ -23,7 +23,7 @@ The prototype works on the tested scenarios after the corrections below. Its agr
 | [ARTIMATION project](https://www.sesarju.eu/projects/artimation) | Project-level transparency and decision-support context | Official SESAR page consulted. |
 | [ENAC scenarios, Zenodo 7437564](https://zenodo.org/records/7437564) | Scenarios adapted from 2016 traffic for validation; includes REJEU exercise and trajectory data | Record consulted; local trajectory files inspected. |
 | [ENAC solutions, Zenodo 7437654](https://zenodo.org/records/7437654) | Outputs of a genetic algorithm developed by Nicolas Durand, including candidate trajectories and metrics | Record consulted; all local default candidate files compared. Archive MD5 verified: `e0997d1839f8c9ce80dc7099be32bbd7`. This is a dataset, not the solver source. |
-| [Vector / NextQCM](https://recherche.enac.fr/~hurter/NextQCM/) | Visualization source attributed to Christophe Hurter | Archived local HTML/JS inspected and exercised as an oracle. Current live version not verified. |
+| [Vector / NextQCM](https://recherche.enac.fr/~hurter/NextQCM/) | Visualization source attributed to Christophe Hurter | Local HTML/JS copy inspected and exercised as an oracle during the audit; no longer in the repository. Current live version not verified. |
 
 The 2024 paper describes three visualizations, not just two. The heatmap accumulates explored good/bad trajectories with Gaussian convolution. Storyboard adds temporal steps, alternatives and a limiting solution. The current application provides adapted BlackBox and HeatMap views, but not that Storyboard.
 
@@ -60,7 +60,7 @@ The active application is `app.py` → `webapp.build_html()` → browser code. D
 10. **Hidden heatmap controls remained visible.** A CSS display rule overrode the HTML hidden attribute on density labels. The override is now explicit, so heading-density smoothing controls are not shown for the GA heatmap.
 11. **The interface mixed two prediction assumptions.** Encounter analysis now explicitly states that future maneuvers are excluded; the full-route solution panel includes them. Heatmap interpretation and scenario provenance are also clarified.
 
-The application UI, generated instructions, main documentation and this report are in English. Original vendor assets and historical research records remain unchanged.
+The application UI, generated instructions, main documentation and this report are in English. Historical research records remain unchanged.
 
 ## Reproducible results
 

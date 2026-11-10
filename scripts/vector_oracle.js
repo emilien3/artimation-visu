@@ -1,5 +1,5 @@
 // Run Vector JS (physics + density) in an isolated VM context (no file/network access) and print JSON results.
-// Oracle for both the ORIGINAL JS (vendor/) and the extended app JS (src/artimation/web/).
+// Oracle for the app JS (src/artimation/web/).
 // Usage: node scripts/vector_oracle.js <js_directory> < input.json    (input: aircraft, horizon, separation, sepV?, density?)
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2];

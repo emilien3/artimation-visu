@@ -2,8 +2,7 @@
 
 Faithful port of `physics.js` (encounters, safe heading space) and `density.js` (positive/negative density maps).
 Tool coordinates: x points right, y points DOWN (screen), headings are degrees clockwise from the top (north),
-speed is in knots, distances in NM and time in minutes. Validated against the original JS
-(tests/test_vector.py, executed under Node).
+speed is in knots, distances in NM and time in minutes.
 """
 from dataclasses import dataclass, replace
 from math import acos, asin, atan2, cos, degrees, hypot, radians, sin, sqrt

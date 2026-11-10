@@ -1,6 +1,6 @@
 # Artimation Visu: architecture and integration of the NextQCM Vector studio
 
-Source: Christophe Hurter's [ENAC NextQCM page](https://recherche.enac.fr/~hurter/NextQCM/), archived unchanged under `vendor/nextqcm/`. The current application extends that archived version, rather than verifying against the current live website.
+Source: Christophe Hurter's [ENAC NextQCM page](https://recherche.enac.fr/~hurter/NextQCM/). The current application extends a copy of that page, taken before this repository removed it, and is not verified against the live website.
 
 ## Original tool
 

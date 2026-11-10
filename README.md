@@ -58,7 +58,6 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 | `app.py`, `src/artimation/server.py` | Local web server |
 | `src/artimation/web/` | The application (HTML, JS solvers, views) |
 | `src/artimation/*.py` | Python reference model, used to cross-check the JS |
-| `vendor/nextqcm/` | Original Vector page, unchanged |
 | `data/scenarios/` | Ten ENAC scenarios adapted from 2016 traffic |
 | `scripts/` | Dataset export and audits |
 | `docs/output/` | Presentations, PDF and audit artifacts |

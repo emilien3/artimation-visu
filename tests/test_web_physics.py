@@ -1,4 +1,4 @@
-"""Compare extended app JS (src/artimation/web) against (1) ORIGINAL ENAC JS without altitude and (2) the Python port with altitude."""
+"""Compare the app JS (src/artimation/web) against the Python port with altitude."""
 import json
 import shutil
 import subprocess
@@ -10,10 +10,9 @@ import pytest
 from artimation.vector import Ac, density_maps3d, encounter3d, heading_space3d
 
 ROOT = Path(__file__).resolve().parents[1]
-ORIGINAL = ROOT / "vendor" / "nextqcm" / "Vector — Aircraft crossing studio_files"
 EXTENDED = ROOT / "src" / "artimation" / "web"
 ORACLE = ROOT / "scripts" / "vector_oracle.js"
-pytestmark = pytest.mark.skipif(not (shutil.which("node") and ORIGINAL.exists()), reason="node ou JS d'origine absent")
+pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node absent")
 
 DEMO = [Ac("AC001", 20, 30, 360, 90), Ac("AC002", 50, 60, 360, 0), Ac("AC003", 90, 20, 300, 225), Ac("AC004", 30, 75, 240, 45), Ac("AC005", 100, 65, 300, 270)]
 STACKED = [Ac("A", 20, 30, 360, 90, z=36000), Ac("B", 50, 60, 360, 0, z=37000, vz=0), Ac("C", 90, 20, 300, 225, z=36000, vz=300),
@@ -24,21 +23,6 @@ def run(folder, aircraft, horizon, sep, sep_v=None, density=None):
     payload = dict(aircraft=[a.__dict__ for a in aircraft], horizon=horizon, separation=sep, sepV=sep_v, density=density)
     out = subprocess.run(["node", str(ORACLE), str(folder)], input=json.dumps(payload), capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
-
-
-@pytest.mark.parametrize("horizon,sep", [(10, 5), (5, 3), (30, 10)])
-def test_extended_js_equals_original_js_without_altitude(horizon, sep):
-    a, b = run(ORIGINAL, DEMO, horizon, sep), run(EXTENDED, DEMO, horizon, sep)
-    assert [(e["a"], e["b"], e["risk"], round(e["distance"], 9)) for e in a["analyze"]] == [(e["a"], e["b"], e["risk"], round(e["distance"], 9)) for e in b["analyze"]]
-    for k in a["headingSpace"]:
-        assert a["headingSpace"][k]["safe"] == b["headingSpace"][k]["safe"] and a["headingSpace"][k]["unsafe"] == b["headingSpace"][k]["unsafe"]
-
-
-def test_extended_js_density_equals_original_js_without_altitude():
-    d = dict(cols=80, rows=60, sigma=1.5)
-    a, b = run(ORIGINAL, DEMO, 10, 5, density=d)["density"], run(EXTENDED, DEMO, 10, 5, density=d)["density"]
-    for k in ("positive", "negative", "signed"):
-        np.testing.assert_array_equal(np.array(a[k]), np.array(b[k]))
 
 
 def test_altitude_ignored_when_sepv_is_zero_even_with_different_levels():
