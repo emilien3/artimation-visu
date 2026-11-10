@@ -1,6 +1,6 @@
 """Explain ENAC distance disagreements, with ordered trajectory-model ablations.
 
-Run: .venv/bin/python scripts/audit_enac.py > artifacts/enac-audit.json
+Run: .venv/bin/python scripts/audit_enac.py > docs/output/artifacts/enac-audit.json
 Requires the optional, checksum-verified Zenodo archive and Node.js.
 No downloads or changes to the source CSV files are performed.
 """

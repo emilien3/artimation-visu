@@ -1,6 +1,6 @@
 """Audit both browser searches on the toy scenarios, with Python cross-checks.
 
-Run: .venv/bin/python scripts/audit_searches.py > artifacts/search-audit.json
+Run: .venv/bin/python scripts/audit_searches.py > docs/output/artifacts/search-audit.json
 Seeds 0..29, two scenarios and two altitude modes: 240 search runs.
 The audit checks sampled proposals and every returned best candidate independently.
 """

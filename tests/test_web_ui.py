@@ -566,7 +566,7 @@ def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app):
     scene(6, 1000)
     assert not app.find_elements(By.CSS_SELECTOR, '[data-zone][data-conflict="true"]')
     assert 'VERTICALLY SEPARATED' in app.find_element(By.CSS_SELECTOR, '[data-zone-pair]').text
-    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'artifacts' / 'vertically-separated-zones.png'))
+    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'docs' / 'output' / 'artifacts' / 'vertically-separated-zones.png'))
     scene(7, 0)
     assert not app.find_elements(By.CSS_SELECTOR, '[data-zone-pair]')
     scene(6, 1000)
@@ -581,7 +581,7 @@ def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app):
     set_details(app.find_element(By.ID, "display-settings"), False)
     pick(app, 'view', '3d')
     assert js(app, f'return {V}.view3d().data.aircraft.every(a=>a.zone.radius===3.5 && a.zone.halfHeight===500 && !a.zone.conflict)')
-    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'artifacts' / 'separation-cylinders-3d.png'))
+    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'docs' / 'output' / 'artifacts' / 'separation-cylinders-3d.png'))
     # Capture rendered cylinder radii, not only the view input.
     assert js(app, f"""const v={V}.view3d(), original=v.circle, radii=[];
       v.circle=function(c,x,y,r,...args){{radii.push(r);return original.call(this,c,x,y,r,...args)}};

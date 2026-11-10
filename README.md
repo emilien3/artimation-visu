@@ -33,12 +33,12 @@ Controller forecasts and actual executed flights are separate records. **Result*
 
 Version 2 CSVs have 37 columns. The first point of each aircraft trajectory (`knot_index = 0`) carries that aircraft's `commands_json`; subsequent points leave this field empty. JSON retains the complete joint command list for every record.
 
-See the [demo guide, dataset schema and method formulas](docs/STARTUP_DEMO.md). Generate the original four GA/annealing datasets with `node scripts/export_exploration.cjs`. To export all five methods on both scenarios, use `node scripts/export_exploration.cjs --methods all --out artifacts/five-methods`. Existing files are never overwritten. All five executable methods are classical; the startup discussion can identify a suitable quantum formulation.
+See the [demo guide, dataset schema and method formulas](docs/STARTUP_DEMO.md). Generate the original four GA/annealing datasets with `node scripts/export_exploration.cjs`. To export all five methods on both scenarios, use `node scripts/export_exploration.cjs --methods all --out docs/output/artifacts/five-methods`. Existing files are never overwritten. All five executable methods are classical; the startup discussion can identify a suitable quantum formulation.
 
 ## Presentation and speaker guide
 
-- [English presentation, 7 slides with editable equations](outputs/01a1c086-b26f-7820-8753-0d6c73532caf/artimation_visu_demo_en_formulas.pptx)
-- [English formula guide, PDF](output/pdf/artimation_visu_formulas_guide_en.pdf)
+- [English presentation, 7 slides with editable equations](docs/output/artimation_visu_demo_en_formulas.pptx)
+- [English formula guide, PDF](docs/output/pdf/artimation_visu_formulas_guide_en.pdf)
 - [English formula guide, Markdown](docs/FORMULAS_EXPLAINED.md)
 
 ## Model and implementation
@@ -92,15 +92,15 @@ Original conflict counters accumulate across population and best-candidate expor
 Reproduce the audit with:
 
 ```bash
-.venv/bin/python scripts/audit_enac.py > artifacts/enac-audit.json
-.venv/bin/python scripts/audit_solver.py --enac > artifacts/solver-enac-audit.json
+.venv/bin/python scripts/audit_enac.py > docs/output/artifacts/enac-audit.json
+.venv/bin/python scripts/audit_solver.py --enac > docs/output/artifacts/solver-enac-audit.json
 ```
 
-Node.js is required. The exhaustive ENAC audit requires the optional Zenodo files; it does not download them automatically. Detailed results are stored in [enac-audit.json](artifacts/enac-audit.json) and [solver-enac-audit.json](artifacts/solver-enac-audit.json). The initial generic-model results are retained in [solver-audit.json](artifacts/solver-audit.json).
+Node.js is required. The exhaustive ENAC audit requires the optional Zenodo files; it does not download them automatically. Detailed results are stored in [enac-audit.json](docs/output/artifacts/enac-audit.json) and [solver-enac-audit.json](docs/output/artifacts/solver-enac-audit.json). The initial generic-model results are retained in [solver-audit.json](docs/output/artifacts/solver-audit.json).
 
 The tests compare the extended browser physics with the archived original JavaScript, compare Python and JavaScript evaluation, exercise the genetic solvers, and cover regression cases. Selenium UI tests additionally require Firefox; a skipped test is not a successful UI check.
 
-Latest local validation: **142 tests passed, zero skipped** (108 model/export tests, 7 HTTP tests and 27 Firefox UI tests). This includes all five methods on the two toy scenarios, continuous Python geometry checks, independent SciPy/HiGHS confirmation of the catalogue optima, original GA/annealing trace fingerprints, JSON/CSV downloads, keyboard tabs, playback, 2D/3D interaction and Studio state preservation. The HTTP/UI regression run also verifies the direct page, inert application name and document scrolling over the radar and sidebar. See the [direct-page verification summary](artifacts/direct-page-verification-2026-11-09.json) and the [five-method verification report](artifacts/five-methods-verification-2026-11-09/README.md). Run the UI suite alone with `.venv/bin/python -m pytest tests/test_web_ui.py -v -ra`. Browser startup failures are errors when Firefox is installed. Historical separation-zone checks remain in [the regression report](artifacts/separation-zone-tests.txt) and [UI checks](artifacts/separation-zone-ui-final.txt).
+Latest local validation: **142 tests passed, zero skipped** (108 model/export tests, 7 HTTP tests and 27 Firefox UI tests). This includes all five methods on the two toy scenarios, continuous Python geometry checks, independent SciPy/HiGHS confirmation of the catalogue optima, original GA/annealing trace fingerprints, JSON/CSV downloads, keyboard tabs, playback, 2D/3D interaction and Studio state preservation. The HTTP/UI regression run also verifies the direct page, inert application name and document scrolling over the radar and sidebar. See the [direct-page verification summary](docs/output/artifacts/direct-page-verification-2026-11-09.json) and the [five-method verification report](docs/output/artifacts/five-methods-verification-2026-11-09/README.md). Run the UI suite alone with `.venv/bin/python -m pytest tests/test_web_ui.py -v -ra`. Browser startup failures are errors when Firefox is installed. Historical separation-zone checks remain in [the regression report](docs/output/artifacts/separation-zone-tests.txt) and [UI checks](docs/output/artifacts/separation-zone-ui-final.txt).
 
 ## Provenance and limits
 
@@ -108,4 +108,4 @@ The unchanged original page and assets are in `vendor/nextqcm/`; the adapted app
 
 The papers consulted do not specify the exact configuration of the ARTIMATION solver. Local fitness weights, GA operators and altitude behavior are modeling choices. BlackBox and HeatMap are adaptations; the papers' Storyboard is absent. The GA offers no guarantee of global optimality or successful resolution for every scenario. FL360 is the route loader's default; the trajectory text files do not encode altitude. Instantaneous turns, deterministic trajectories and simplified speed control are modeling choices.
 
-Dataset licensing is CC BY 4.0. The archived Vector code has no explicit license identified in this audit; clarify redistribution permission with its author before publishing it. Historical CBR/SHAP/LIME plans concern an earlier project state and are not part of the current application.
+Dataset licensing is CC BY 4.0. The archived Vector code has no explicit license identified in this audit; clarify redistribution permission with its author before publishing it.

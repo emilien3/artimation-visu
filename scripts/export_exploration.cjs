@@ -13,7 +13,7 @@ function main(args) {
   if (args.includes('--help')) {
     console.log('Usage: node scripts/export_exploration.cjs [--out DIRECTORY] [--seed INTEGER] [--methods all|METHOD,METHOD]'); return;
   }
-  const options = {out: path.resolve(__dirname, '../artifacts/exploration'), seed: 0, methods: 'genetic,simulated-annealing'};
+  const options = {out: path.resolve(__dirname, '../docs/output/artifacts/exploration'), seed: 0, methods: 'genetic,simulated-annealing'};
   for (let i = 0; i < args.length; i += 2) {
     if (!['--out', '--seed', '--methods'].includes(args[i]) || !args[i + 1]) throw new Error('Expected --out DIRECTORY, --seed INTEGER or --methods METHOD,METHOD');
     options[args[i].slice(2)] = args[i + 1];

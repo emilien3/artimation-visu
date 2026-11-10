@@ -1,0 +1,903 @@
+{
+  "source": "https://zenodo.org/records/7437654",
+  "archive_md5": "e0997d1839f8c9ce80dc7099be32bbd7",
+  "scope": "Default sols1-1.csv through sols10-1.csv and corresponding best files; repeated candidates retained",
+  "threshold_nm": 7,
+  "scenarios": [
+    {
+      "scenario": 1,
+      "candidates": 10100,
+      "sha256": "06804b0dff3318cee5a686de531cd9b8910202160be741fbf2ac27b1d01e99f7",
+      "best_sha256": "30037f6e36ec02b9ba3e2941668a7abe196f241e6db8b3d25a6302bd9f3dbca6",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.2607255971315377e-06,
+      "point_counts": {
+        "4": 15356,
+        "2": 4834,
+        "3": 10
+      },
+      "snapshot_offset_s": [
+        1.6900328944760543,
+        1.6900283746583142
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.004818029508154353,
+          "p95_error_nm": 0.01120092619783275,
+          "max_error_nm": 0.5392737393322687,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "constant_speed": {
+          "median_error_nm": 0.006503697599660185,
+          "p95_error_nm": 0.009563896990278486,
+          "max_error_nm": 0.5571204945012997,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.0065033732511663445,
+          "p95_error_nm": 0.009563574272541508,
+          "max_error_nm": 0.5571209210612396,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "reconstructed": {
+          "median_error_nm": 2.6186347046319725e-07,
+          "p95_error_nm": 5.814609238541379e-07,
+          "max_error_nm": 7.13783339101326e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 3.649397237737162e-07,
+          "p95_error_nm": 9.885260494613135e-07,
+          "max_error_nm": 1.2766402015529366e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 268,
+        "max_error_s": 324.3441555264745,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.00026490587255789677,
+        "population_counter_max_error_s": 1.0000000258969521e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 25,
+        "example": {
+          "generation": 4,
+          "id": 2019,
+          "aircraft": 0,
+          "exported_s": 389.212985,
+          "replay_s": 64.86882947352554
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1434,
+        "ids_with_changing_counters": 110,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 8489,
+        "safe_score_rounding_matches": 8489,
+        "safe_score_max_error": 4.995612482572298e-07
+      }
+    },
+    {
+      "scenario": 2,
+      "candidates": 10100,
+      "sha256": "9450266e0c925963c04c71e2c0390ac7d19bb260a27dedcacf56feb332c53548",
+      "best_sha256": "3a2d3a88ee21aa4e5ae11d112ccf8497f7fca31d1820d9607013d60b35d292eb",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.0089438005592557e-06,
+      "point_counts": {
+        "4": 17082,
+        "2": 12899,
+        "3": 319
+      },
+      "snapshot_offset_s": [
+        1.4890443433150895,
+        1.489041912374039,
+        1.4890447785497436
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.10113710096540007,
+          "p95_error_nm": 0.5696428724106768,
+          "max_error_nm": 1.1690501460975469,
+          "disagreements": 2052,
+          "local_unsafe_reference_safe": 2033,
+          "local_safe_reference_unsafe": 19
+        },
+        "constant_speed": {
+          "median_error_nm": 0.06256911003452359,
+          "p95_error_nm": 0.5669475453975199,
+          "max_error_nm": 1.110184088189408,
+          "disagreements": 2051,
+          "local_unsafe_reference_safe": 2032,
+          "local_safe_reference_unsafe": 19
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.06256943932361025,
+          "p95_error_nm": 0.5669475958618481,
+          "max_error_nm": 1.110184014069631,
+          "disagreements": 2051,
+          "local_unsafe_reference_safe": 2032,
+          "local_safe_reference_unsafe": 19
+        },
+        "reconstructed": {
+          "median_error_nm": 2.962000698047973e-07,
+          "p95_error_nm": 5.108468981163128e-07,
+          "max_error_nm": 6.668144898469563e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.5544480752870413e-07,
+          "p95_error_nm": 6.920064024029671e-07,
+          "max_error_nm": 1.297526680987815e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 169,
+        "max_error_s": 240.56024562679778,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.00017521895063055126,
+        "population_counter_max_error_s": 2.000000023372195e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 17,
+        "example": {
+          "generation": 1,
+          "id": 44,
+          "aircraft": 0,
+          "exported_s": 360.840371,
+          "replay_s": 120.28012537320222
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1261,
+        "ids_with_changing_counters": 65,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 7908,
+        "safe_score_rounding_matches": 7908,
+        "safe_score_max_error": 4.996424709524661e-07
+      }
+    },
+    {
+      "scenario": 3,
+      "candidates": 10100,
+      "sha256": "f453c98cce131c5fe9408a00abdffee83ac6ee1c884eb0c052099291150d8299",
+      "best_sha256": "4e67cffb562c00e1c66e2922c126a20a16113c6a02e195d0fd9c0d95b297e57f",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.2507422643812321e-06,
+      "point_counts": {
+        "4": 13659,
+        "2": 6508,
+        "3": 33
+      },
+      "snapshot_offset_s": [
+        1.5630160938499797,
+        1.5630135764076796
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.03057487873504261,
+          "p95_error_nm": 0.47399172658399724,
+          "max_error_nm": 1.5077977826570406,
+          "disagreements": 819,
+          "local_unsafe_reference_safe": 771,
+          "local_safe_reference_unsafe": 48
+        },
+        "constant_speed": {
+          "median_error_nm": 0.0309686891870653,
+          "p95_error_nm": 0.4885116403804366,
+          "max_error_nm": 1.5077977826570486,
+          "disagreements": 817,
+          "local_unsafe_reference_safe": 793,
+          "local_safe_reference_unsafe": 24
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.030968837166105878,
+          "p95_error_nm": 0.4885114821430854,
+          "max_error_nm": 1.507797622126776,
+          "disagreements": 817,
+          "local_unsafe_reference_safe": 793,
+          "local_safe_reference_unsafe": 24
+        },
+        "reconstructed": {
+          "median_error_nm": 2.78600276182317e-07,
+          "p95_error_nm": 5.225927735885699e-07,
+          "max_error_nm": 7.945986304491726e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.709815714041497e-07,
+          "p95_error_nm": 7.113599377994713e-07,
+          "max_error_nm": 1.1844801450777709e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 216,
+        "max_error_s": 195.25004693484803,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.00014117288791126725,
+        "population_counter_max_error_s": 1.0000000258969521e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 16,
+        "example": {
+          "generation": 2,
+          "id": 53,
+          "aircraft": 0,
+          "exported_s": 260.333396,
+          "replay_s": 65.08334906515196
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1334,
+        "ids_with_changing_counters": 100,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 7712,
+        "safe_score_rounding_matches": 7712,
+        "safe_score_max_error": 4.997637497172747e-07
+      }
+    },
+    {
+      "scenario": 4,
+      "candidates": 10100,
+      "sha256": "6750d3266310c88f7cef36d98957111f70056ec3c0f960447b1d2574b23b14d6",
+      "best_sha256": "3890624b31a7887991669afb1f5a5c26929e3c5d2e8156a1d8a1244f4c6f3cda",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.2211837649557357e-06,
+      "point_counts": {
+        "4": 25005,
+        "2": 5232,
+        "3": 63
+      },
+      "snapshot_offset_s": [
+        1.518007352675187,
+        1.5180091080278746,
+        1.5180119010481536
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 4.3314998432464336e-07,
+          "p95_error_nm": 0.11058000810709068,
+          "max_error_nm": 1.8717903544596908,
+          "disagreements": 76,
+          "local_unsafe_reference_safe": 37,
+          "local_safe_reference_unsafe": 39
+        },
+        "constant_speed": {
+          "median_error_nm": 4.3314998432464336e-07,
+          "p95_error_nm": 0.10388121537577621,
+          "max_error_nm": 0.5658443400386174,
+          "disagreements": 75,
+          "local_unsafe_reference_safe": 37,
+          "local_safe_reference_unsafe": 38
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 3.157716870205718e-07,
+          "p95_error_nm": 0.1038813885883337,
+          "max_error_nm": 0.5658446057255127,
+          "disagreements": 75,
+          "local_unsafe_reference_safe": 37,
+          "local_safe_reference_unsafe": 38
+        },
+        "reconstructed": {
+          "median_error_nm": 3.1577168080332285e-07,
+          "p95_error_nm": 5.999077245077966e-07,
+          "max_error_nm": 1.1120311240730985e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.2520436893103124e-07,
+          "p95_error_nm": 6.388717561867096e-07,
+          "max_error_nm": 1.3351804017958102e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 857,
+        "max_error_s": 732.6918379347352,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.00012320799587506315,
+        "population_counter_max_error_s": 3.999999989900971e-06,
+        "best_counter_max_error_s": 1.0000000010279564e-06,
+        "max_occurrences": 18,
+        "example": {
+          "generation": 12,
+          "id": 6005,
+          "aircraft": 1,
+          "exported_s": 814.102034,
+          "replay_s": 81.41019606526484
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1382,
+        "ids_with_changing_counters": 306,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 6662,
+        "safe_score_rounding_matches": 6662,
+        "safe_score_max_error": 4.999085578827334e-07
+      }
+    },
+    {
+      "scenario": 5,
+      "candidates": 10100,
+      "sha256": "068487de3baf165ee39cb00b41560b4a1ee40048ba381426026f33dc218acf6f",
+      "best_sha256": "d106003f04af8893c19014227d8551115fd5971922989323387556679e85bec4",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.0953433478162184e-06,
+      "point_counts": {
+        "4": 23083,
+        "2": 7207,
+        "3": 10
+      },
+      "snapshot_offset_s": [
+        1.7309804713310588,
+        1.7309813209850884,
+        1.7309811090553133
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 3.2420873563587804e-07,
+          "p95_error_nm": 0.049826762969212665,
+          "max_error_nm": 0.7461076839441594,
+          "disagreements": 56,
+          "local_unsafe_reference_safe": 53,
+          "local_safe_reference_unsafe": 3
+        },
+        "constant_speed": {
+          "median_error_nm": 3.2420873563587804e-07,
+          "p95_error_nm": 0.049454890541407615,
+          "max_error_nm": 0.7461076839441549,
+          "disagreements": 56,
+          "local_unsafe_reference_safe": 53,
+          "local_safe_reference_unsafe": 3
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 3.378789661390158e-07,
+          "p95_error_nm": 0.04945480548302772,
+          "max_error_nm": 0.7461077511061305,
+          "disagreements": 56,
+          "local_unsafe_reference_safe": 53,
+          "local_safe_reference_unsafe": 3
+        },
+        "reconstructed": {
+          "median_error_nm": 2.432636224403151e-07,
+          "p95_error_nm": 5.862514784737982e-07,
+          "max_error_nm": 7.914224440241924e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.763454087784112e-07,
+          "p95_error_nm": 7.307272408052511e-07,
+          "max_error_nm": 1.3811316561529452e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 932,
+        "max_error_s": 703.7507397439562,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.0005804096452197705,
+        "population_counter_max_error_s": 2.0000000517939043e-06,
+        "best_counter_max_error_s": 1.0000000258969521e-06,
+        "max_occurrences": 18,
+        "example": {
+          "generation": 2,
+          "id": 14,
+          "aircraft": 0,
+          "exported_s": 938.334321,
+          "replay_s": 234.58358125604389
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1362,
+        "ids_with_changing_counters": 299,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 6834,
+        "safe_score_rounding_matches": 6834,
+        "safe_score_max_error": 4.998216257545707e-07
+      }
+    },
+    {
+      "scenario": 6,
+      "candidates": 20200,
+      "sha256": "f4e894330f83540e9dd6a37cee0913ce38094714d66a75e705eb0a7478a3cc16",
+      "best_sha256": "c0ddd82ed57e1e5c168e3c3cc1522b131ffd317a3920f5569ef4d32f9b294abc",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.415270091247943e-06,
+      "point_counts": {
+        "2": 31347,
+        "4": 29185,
+        "3": 68
+      },
+      "snapshot_offset_s": [
+        5.729971580032494,
+        5.729971671282379,
+        5.729973256857321
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.023705542899751464,
+          "p95_error_nm": 1.4232319006392327,
+          "max_error_nm": 3.370991857759177,
+          "disagreements": 2887,
+          "local_unsafe_reference_safe": 2809,
+          "local_safe_reference_unsafe": 78
+        },
+        "constant_speed": {
+          "median_error_nm": 0.029562000112222542,
+          "p95_error_nm": 0.3412948131646014,
+          "max_error_nm": 1.4489066413867873,
+          "disagreements": 2753,
+          "local_unsafe_reference_safe": 2691,
+          "local_safe_reference_unsafe": 62
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.02955554579181907,
+          "p95_error_nm": 0.3412949138933271,
+          "max_error_nm": 1.448906763558515,
+          "disagreements": 2753,
+          "local_unsafe_reference_safe": 2691,
+          "local_safe_reference_unsafe": 62
+        },
+        "reconstructed": {
+          "median_error_nm": 2.7430400706407454e-07,
+          "p95_error_nm": 5.005934839985571e-07,
+          "max_error_nm": 1.0601412121502563e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.2113569109194486e-07,
+          "p95_error_nm": 6.696253063154245e-07,
+          "max_error_nm": 1.526695330156258e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 172,
+        "max_error_s": 209.13580695590483,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.0005439675973750724,
+        "population_counter_max_error_s": 2.0000000020559128e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 22,
+        "example": {
+          "generation": 1,
+          "id": 86,
+          "aircraft": 1,
+          "exported_s": 313.703717,
+          "replay_s": 104.56791004409516
+        }
+      },
+      "fitness": {
+        "repeated_ids": 2049,
+        "ids_with_changing_counters": 66,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 16192,
+        "safe_score_rounding_matches": 16192,
+        "safe_score_max_error": 4.999639088287822e-07
+      }
+    },
+    {
+      "scenario": 7,
+      "candidates": 20200,
+      "sha256": "797a346574427a7fd65b746ddfd160a62763fc81eff157351a239d923d17420b",
+      "best_sha256": "43e9d445dbf68bdce2261ff6f0ceda8331e769c8317704f2a107d77edbd15776",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.0193633841408259e-06,
+      "point_counts": {
+        "4": 34966,
+        "2": 5419,
+        "3": 15
+      },
+      "snapshot_offset_s": [
+        1.3139809825874207,
+        1.3139813913328424
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 4.024955098103078e-07,
+          "p95_error_nm": 0.01062702950815364,
+          "max_error_nm": 0.49698294605838633,
+          "disagreements": 1,
+          "local_unsafe_reference_safe": 1,
+          "local_safe_reference_unsafe": 0
+        },
+        "constant_speed": {
+          "median_error_nm": 3.9483939584528116e-07,
+          "p95_error_nm": 0.009499097904345976,
+          "max_error_nm": 0.4437969885924091,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 3.932838903430991e-07,
+          "p95_error_nm": 0.009499077055121319,
+          "max_error_nm": 0.44379702699161916,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "reconstructed": {
+          "median_error_nm": 2.0934383115900346e-07,
+          "p95_error_nm": 4.912519326882857e-07,
+          "max_error_nm": 6.432941130896097e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 3.8646141042875115e-07,
+          "p95_error_nm": 8.321425672974669e-07,
+          "max_error_nm": 1.4431151278415655e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 360,
+        "max_error_s": 303.0727581038382,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.0009363961973999912,
+        "population_counter_max_error_s": 1.9999999949504854e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 21,
+        "example": {
+          "generation": 3,
+          "id": 1030,
+          "aircraft": 0,
+          "exported_s": 363.68731,
+          "replay_s": 60.61455189616178
+        }
+      },
+      "fitness": {
+        "repeated_ids": 2222,
+        "ids_with_changing_counters": 145,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 15592,
+        "safe_score_rounding_matches": 15592,
+        "safe_score_max_error": 4.998594885785579e-07
+      }
+    },
+    {
+      "scenario": 8,
+      "candidates": 20200,
+      "sha256": "d9c70692d2409b200a7ae88745931232c9d02821e071a32a3634e2902f973e66",
+      "best_sha256": "a878ccb53acca10a75b28059e1f2dbb9e0ed119e410404edba0ed189d12e5909",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 9.507953310457333e-07,
+      "point_counts": {
+        "4": 43021,
+        "2": 17433,
+        "3": 146
+      },
+      "snapshot_offset_s": [
+        5.213975964082559,
+        5.213973044461392,
+        5.213975141811483
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.04634689123989766,
+          "p95_error_nm": 0.20958962640505252,
+          "max_error_nm": 1.4138523633427078,
+          "disagreements": 438,
+          "local_unsafe_reference_safe": 121,
+          "local_safe_reference_unsafe": 317
+        },
+        "constant_speed": {
+          "median_error_nm": 0.030058299584528214,
+          "p95_error_nm": 0.062383742254754446,
+          "max_error_nm": 1.4025783386565882,
+          "disagreements": 270,
+          "local_unsafe_reference_safe": 143,
+          "local_safe_reference_unsafe": 127
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.030058093426641896,
+          "p95_error_nm": 0.06238370020299983,
+          "max_error_nm": 1.402578291501671,
+          "disagreements": 270,
+          "local_unsafe_reference_safe": 143,
+          "local_safe_reference_unsafe": 127
+        },
+        "reconstructed": {
+          "median_error_nm": 2.4445071211687264e-07,
+          "p95_error_nm": 5.436798842239909e-07,
+          "max_error_nm": 6.724111303313407e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.654328552509355e-07,
+          "p95_error_nm": 7.926244860012578e-07,
+          "max_error_nm": 1.3932382989523262e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 389,
+        "max_error_s": 324.1452539326855,
+        "normalized_rows_over_1ms": 14,
+        "normalized_max_error_s": 0.0013704216365990618,
+        "population_counter_max_error_s": 1.9999999949504854e-06,
+        "best_counter_max_error_s": 9.999999974752427e-07,
+        "max_occurrences": 21,
+        "example": {
+          "generation": 4,
+          "id": 2096,
+          "aircraft": 0,
+          "exported_s": 486.217877,
+          "replay_s": 162.0726230673145
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1612,
+        "ids_with_changing_counters": 119,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 15559,
+        "safe_score_rounding_matches": 15559,
+        "safe_score_max_error": 4.999703324681803e-07
+      }
+    },
+    {
+      "scenario": 9,
+      "candidates": 20200,
+      "sha256": "e12457cfec3fc53f1fb37947758ea1f68b8353340b0c8e9eae6a2efb416e001b",
+      "best_sha256": "42936ccf062efa41451733266693ccd2baf07ae61576de140d28e7ffe04608b6",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.0814735165545775e-06,
+      "point_counts": {
+        "4": 42126,
+        "2": 18367,
+        "3": 107
+      },
+      "snapshot_offset_s": [
+        2.043011167329479,
+        2.043012309590722,
+        2.0430080438203495
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.05486763288256036,
+          "p95_error_nm": 0.3108994727758281,
+          "max_error_nm": 2.2742489073830323,
+          "disagreements": 3663,
+          "local_unsafe_reference_safe": 3553,
+          "local_safe_reference_unsafe": 110
+        },
+        "constant_speed": {
+          "median_error_nm": 0.05147076722111388,
+          "p95_error_nm": 0.3108625054579619,
+          "max_error_nm": 2.2742489073830323,
+          "disagreements": 3653,
+          "local_unsafe_reference_safe": 3543,
+          "local_safe_reference_unsafe": 110
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.05147095219345221,
+          "p95_error_nm": 0.3108622630811517,
+          "max_error_nm": 2.274249082646829,
+          "disagreements": 3653,
+          "local_unsafe_reference_safe": 3543,
+          "local_safe_reference_unsafe": 110
+        },
+        "reconstructed": {
+          "median_error_nm": 2.4125136199870667e-07,
+          "p95_error_nm": 4.828151588753825e-07,
+          "max_error_nm": 8.921535570305394e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 2.530465268435478e-07,
+          "p95_error_nm": 7.140435034358461e-07,
+          "max_error_nm": 1.360650026427379e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 130,
+        "max_error_s": 207.79196362164876,
+        "normalized_rows_over_1ms": 2,
+        "normalized_max_error_s": 0.0015604121679343441,
+        "population_counter_max_error_s": 1.9999999949504854e-06,
+        "best_counter_max_error_s": 0.0,
+        "max_occurrences": 21,
+        "example": {
+          "generation": 2,
+          "id": 147,
+          "aircraft": 0,
+          "exported_s": 277.055962,
+          "replay_s": 69.26399837835126
+        }
+      },
+      "fitness": {
+        "repeated_ids": 1694,
+        "ids_with_changing_counters": 51,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 15624,
+        "safe_score_rounding_matches": 15624,
+        "safe_score_max_error": 4.999784042336586e-07
+      }
+    },
+    {
+      "scenario": 10,
+      "candidates": 20200,
+      "sha256": "0cc4a890b1c423a71cdf29627b21b53f1516028e4093a434d3977dfdcaf6d0a1",
+      "best_sha256": "531134550aee73e414d191c69c221c665d2fa6e90daa5405accc53eca9ae7cba",
+      "best_candidates": 101,
+      "geometry_shape_mismatches": 0,
+      "max_geometry_error_nm": 1.0818324875548112e-06,
+      "point_counts": {
+        "4": 39413,
+        "2": 21162,
+        "3": 25
+      },
+      "snapshot_offset_s": [
+        1.872953649694821,
+        1.872957380422209,
+        1.8729610487814083
+      ],
+      "stages": {
+        "previous_model": {
+          "median_error_nm": 0.21778047242700138,
+          "p95_error_nm": 0.256701349608667,
+          "max_error_nm": 0.8876305701538496,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "constant_speed": {
+          "median_error_nm": 0.01854315430053166,
+          "p95_error_nm": 0.04970757211902521,
+          "max_error_nm": 0.88763057015385,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "snapshot_without_pruning": {
+          "median_error_nm": 0.018543965222795666,
+          "p95_error_nm": 0.049707206841134166,
+          "max_error_nm": 0.8876308782062516,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "reconstructed": {
+          "median_error_nm": 3.279015297064092e-07,
+          "p95_error_nm": 4.943904250431785e-07,
+          "max_error_nm": 8.471327159753628e-07,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        },
+        "export_replay": {
+          "median_error_nm": 3.038772202756945e-07,
+          "p95_error_nm": 5.612854250269805e-07,
+          "max_error_nm": 1.2106163600478226e-06,
+          "disagreements": 0,
+          "local_unsafe_reference_safe": 0,
+          "local_safe_reference_unsafe": 0
+        }
+      },
+      "conflict_duration": {
+        "rows_over_1ms": 9939,
+        "max_error_s": 1749.2015235821254,
+        "normalized_rows_over_1ms": 0,
+        "normalized_max_error_s": 0.00014496625320248313,
+        "population_counter_max_error_s": 5.000000101063051e-06,
+        "best_counter_max_error_s": 2.0000000517939043e-06,
+        "max_occurrences": 14,
+        "example": {
+          "generation": 17,
+          "id": 7127,
+          "aircraft": 2,
+          "exported_s": 1924.121672,
+          "replay_s": 174.92014841787466
+        }
+      },
+      "fitness": {
+        "repeated_ids": 2444,
+        "ids_with_changing_counters": 2444,
+        "ids_with_changing_genes": 0,
+        "ids_with_changing_trajectories": 0,
+        "ids_with_changing_fitness_in_either_file": 0,
+        "genotypes_with_changing_fitness": 0,
+        "fitness_safety_disagreements": 0,
+        "safe_candidates": 0,
+        "safe_score_rounding_matches": 0,
+        "safe_score_max_error": null
+      }
+    }
+  ],
+  "candidates": 151500,
+  "disagreements": {
+    "previous_model": 9992,
+    "constant_speed": 9675,
+    "snapshot_without_pruning": 9675,
+    "reconstructed": 0,
+    "export_replay": 0
+  }
+}

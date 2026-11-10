@@ -1,4 +1,4 @@
-# Vector — Aircraft crossing studio: architecture and integration
+# Artimation Visu: architecture and integration of the NextQCM Vector studio
 
 Source: Christophe Hurter's [ENAC NextQCM page](https://recherche.enac.fr/~hurter/NextQCM/), archived unchanged under `vendor/nextqcm/`. The current application extends that archived version, rather than verifying against the current live website.
 

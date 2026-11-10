@@ -121,10 +121,10 @@ To create all four datasets without a browser:
 ```bash
 node scripts/export_exploration.cjs
 node scripts/export_exploration.cjs --seed 1 --out /tmp/artimation-exploration-seed-1
-node scripts/export_exploration.cjs --methods all --out artifacts/five-methods
+node scripts/export_exploration.cjs --methods all --out docs/output/artifacts/five-methods
 ```
 
-Each run produces one complete JSON, one `safe` CSV and one `unsafe` CSV. The default remains the four historical GA/annealing runs: both scenarios, with GA population 60 and 40 generations. Use `--methods all` for all five methods on both scenarios, or a comma-separated selection such as `--methods orca,mpc,milp`. The default directory is `artifacts/exploration/`, with a `summary-seed-0.json` summary. The script refuses to overwrite an existing file: use another directory to repeat an identical run. The standalone HTML download also contains this view for offline demonstrations.
+Each run produces one complete JSON, one `safe` CSV and one `unsafe` CSV. The default remains the four historical GA/annealing runs: both scenarios, with GA population 60 and 40 generations. Use `--methods all` for all five methods on both scenarios, or a comma-separated selection such as `--methods orca,mpc,milp`. The default directory is `docs/output/artifacts/exploration/`, with a `summary-seed-0.json` summary. The script refuses to overwrite an existing file: use another directory to repeat an identical run. The standalone HTML download also contains this view for offline demonstrations.
 
 ### Version 2 for ORCA, MPC and MILP
 

@@ -1,0 +1,19 @@
+Firefox UI results extracted from the final full-suite run.
+Firefox 159.0.1 / geckodriver 0.37.1 / Selenium 4.52.0
+
+PASSED test_loads_with_demo_and_all_scenarios (6.046 s)
+PASSED test_play_advances_time_and_moves_aircraft (3.346 s)
+PASSED test_place_aircraft_by_click_in_2d (2.256 s)
+PASSED test_drag_aircraft_and_steer_vector_in_2d (2.975 s)
+PASSED test_editing_a_field_at_time_zero_and_keyboard (2.114 s)
+PASSED test_real_scenario_has_the_conflict_of_the_python_model (1.617 s)
+PASSED test_genetic_algorithm_resolves_the_conflict_and_shows_heatmap (1.973 s)
+PASSED test_vertical_separation_resolves_a_same_level_conflict (2.131 s)
+PASSED test_3d_view_drag_orbit_place_play[alt] (5.273 s)
+PASSED test_3d_view_drag_orbit_place_play[time] (6.014 s)
+PASSED test_3d_view_drag_orbit_place_play[relief] (5.495 s)
+PASSED test_same_layers_2d_and_3d_and_backgrounds (7.671 s)
+PASSED test_manual_maneuvers_and_safe_headings_panel (3.553 s)
+
+13 passed; 0 failed; 0 errors; 0 skipped.
+Complete run: 88 passed in 81.90 seconds. See test-results.txt and test-results.xml.

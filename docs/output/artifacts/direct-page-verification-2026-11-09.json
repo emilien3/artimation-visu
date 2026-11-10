@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-09",
+  "entrypoint": "artimation.server.make_server on an ephemeral localhost port",
+  "runs": [
+    {
+      "command": ".venv/bin/python -m pytest tests/test_server.py tests/test_web_ui.py -q -k \"http or standalone_download or direct_page_brand or document_owns_scrolling\" --maxfail=3",
+      "passed": 9,
+      "deselected": 25,
+      "skipped": 0,
+      "elapsed_s": 15.16
+    },
+    {
+      "command": ".venv/bin/python -m pytest tests/test_web_ui.py -q --maxfail=5",
+      "passed": 27,
+      "skipped": 0,
+      "elapsed_s": 130.93
+    }
+  ],
+  "checks": [
+    "HTTP entrypoint and standalone download contain the visualization itself",
+    "Unknown paths and workspace files return 404",
+    "Artimation Visu branding and removed caption",
+    "Repeated brand clicks preserve state, URL and JavaScript document without frames",
+    "Native wheel input over radar and sidebar scrolls the document",
+    "All previous editing, 2D/3D, five-method and export regressions retained"
+  ],
+  "javascript_errors": 0,
+  "record": "Summary of completed pytest tool output, not a raw terminal transcript"
+}

@@ -1,7 +1,7 @@
 """Reproducible audit: JS GA on ten scenarios, three seeds and two modes,
 then geometric comparison with every locally available ENAC candidate.
 
-Run: .venv/bin/python scripts/audit_solver.py > artifacts/solver-audit.json
+Run: .venv/bin/python scripts/audit_solver.py > docs/output/artifacts/solver-audit.json
 Timings include Node startup and serialization, but exclude UI rendering.
 """
 import json

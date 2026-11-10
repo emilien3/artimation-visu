@@ -1,4 +1,4 @@
-# Scientific and technical audit of Vector+
+# Scientific and technical audit of Artimation Visu
 
 Date: 5 November 2026. Scope: the existing working tree, its archived Vector source, the supplied 2024 paper, accessible related publications, and the locally available ENAC datasets. Pre-existing uncommitted changes were retained; no commit or publication was made.
 
@@ -68,7 +68,7 @@ Commands:
 
 ```bash
 .venv/bin/python -m pytest -q
-.venv/bin/python scripts/audit_solver.py > artifacts/solver-audit.json
+.venv/bin/python scripts/audit_solver.py > docs/output/artifacts/solver-audit.json
 ```
 
 The initial suite had **39 passed / 13 skipped**. The final run completed with **54 passed / 13 skipped** in about 30 seconds. The suite includes targeted regression tests in `tests/test_ga_invariants.py` and `tests/ga_invariants.cjs`. Firefox is absent, so the thirteen Selenium tests are skipped; they must not be counted as successful UI validation. Additional interactive browser checks covered scenario loading, horizontal GA, altitude-enabled GA, heatmap display, 3D selection and playback. These spot checks do not replace the full drag/keyboard/Selenium suite.
@@ -98,7 +98,7 @@ The final ENAC reference solutions for scenarios 2, 3 and 9 report just over 7 N
 
 At this initial stage the cause was unresolved. The subsequent [reconstruction audit](ENAC_RECONSTRUCTION.md) identified constant-speed retiming, the exported snapshot, and 2.5° angular pruning. It reproduces both full geometry and minimum distance without changing the 7 NM threshold. The earlier time-discretization hypothesis was not needed. The browser now evaluates ENAC scenarios using that reconstructed model.
 
-Machine-readable details: [solver-audit.json](../artifacts/solver-audit.json). The script records runtime versions, configuration, best genes, outcome metrics and comparison statistics; it does not download missing datasets.
+Machine-readable details: [solver-audit.json](output/artifacts/solver-audit.json). The script records runtime versions, configuration, best genes, outcome metrics and comparison statistics; it does not download missing datasets.
 
 ## Next checks with the authors
 

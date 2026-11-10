@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="Firefox UI cases from the full suite" tests="13" failures="0" errors="0" skipped="0" time="50.464">
+    <testcase classname="tests.test_web_ui" name="test_loads_with_demo_and_all_scenarios" time="6.046" />
+    <testcase classname="tests.test_web_ui" name="test_play_advances_time_and_moves_aircraft" time="3.346" />
+    <testcase classname="tests.test_web_ui" name="test_place_aircraft_by_click_in_2d" time="2.256" />
+    <testcase classname="tests.test_web_ui" name="test_drag_aircraft_and_steer_vector_in_2d" time="2.975" />
+    <testcase classname="tests.test_web_ui" name="test_editing_a_field_at_time_zero_and_keyboard" time="2.114" />
+    <testcase classname="tests.test_web_ui" name="test_real_scenario_has_the_conflict_of_the_python_model" time="1.617" />
+    <testcase classname="tests.test_web_ui" name="test_genetic_algorithm_resolves_the_conflict_and_shows_heatmap" time="1.973" />
+    <testcase classname="tests.test_web_ui" name="test_vertical_separation_resolves_a_same_level_conflict" time="2.131" />
+    <testcase classname="tests.test_web_ui" name="test_3d_view_drag_orbit_place_play[alt]" time="5.273" />
+    <testcase classname="tests.test_web_ui" name="test_3d_view_drag_orbit_place_play[time]" time="6.014" />
+    <testcase classname="tests.test_web_ui" name="test_3d_view_drag_orbit_place_play[relief]" time="5.495" />
+    <testcase classname="tests.test_web_ui" name="test_same_layers_2d_and_3d_and_backgrounds" time="7.671" />
+    <testcase classname="tests.test_web_ui" name="test_manual_maneuvers_and_safe_headings_panel" time="3.553" />
+  </testsuite>
+</testsuites>

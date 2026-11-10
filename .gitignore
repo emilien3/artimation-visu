@@ -1,9 +1,10 @@
 .venv/
 __pycache__/
-artifacts/*.pkl
-artifacts/*.parquet
+docs/output/artifacts/*.pkl
+docs/output/artifacts/*.parquet
 .pytest_cache/
 data/zenodo/
 .DS_Store
 ~$*
 *.inspect.ndjson
+docs/output/artifacts/exploration/

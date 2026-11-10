@@ -109,8 +109,8 @@ The original final solution for scenario 10 remains **unsafe at 7 NM**: its reco
 
 ```bash
 .venv/bin/python -m pytest -q
-.venv/bin/python scripts/audit_enac.py > artifacts/enac-audit.json
-.venv/bin/python scripts/audit_solver.py --enac > artifacts/solver-enac-audit.json
+.venv/bin/python scripts/audit_enac.py > docs/output/artifacts/enac-audit.json
+.venv/bin/python scripts/audit_solver.py --enac > docs/output/artifacts/solver-enac-audit.json
 ```
 
 Node.js and the optional downloaded Zenodo solution archive are required for the exhaustive audits. The tests include small attributed fixtures and run without that download. `audit_enac.py` checks complete geometry, ordered model ablations, export-counter arithmetic, repeated-ID and genotype fitness consistency, and the inferred safe-score formula. `solver-enac-audit.json` records 60 searches, using ten scenarios, seeds 0/1/2, with and without altitude changes, population 60 and 60 generations. Each returned browser solution is independently evaluated in Python.

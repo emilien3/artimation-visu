@@ -1,4 +1,4 @@
-# The 2022 ARTIMATION paper versus Vector+
+# The 2022 ARTIMATION paper versus Artimation Visu
 
 **Implementation follow-up:** adjustable local fitness weights and Gaussian smoothing of the GA heatmap have since been added. The comparison below records the pre-change audit; its missing-Gaussian and fixed-weight findings are historical. Exact original fitness and heatmap parameter fidelity remain unverified. See the README for current controls.
 
@@ -110,4 +110,4 @@ Paths below are relative to the repository root; function names remain useful if
 - `src/artimation/web/app.js`: `draw`, `heatPixels`, `renderSolutionPanel`, `drawCharts`, `runGA`, `applyBackground`.
 - `src/artimation/web/index.html`: `ga-vertical`, `background`, solution and chart panels.
 - `src/artimation/web/density.js`: `gaussianKernel`, `convolve`, heading-density pipeline; not the GA heatmap.
-- [ENAC numerical evidence](../artifacts/enac-audit.json), [local solver runs](../artifacts/solver-enac-audit.json), [prior test results](../artifacts/test-results.txt).
+- [ENAC numerical evidence](output/artifacts/enac-audit.json), [local solver runs](output/artifacts/solver-enac-audit.json), [prior test results](output/artifacts/test-results.txt).
