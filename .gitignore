@@ -8,3 +8,5 @@ data/zenodo/
 ~$*
 *.inspect.ndjson
 docs/output/artifacts/exploration/
+.agents/
+.claude/

@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
-platform darwin -- Python 3.14.7, pytest-9.2.0, pluggy-1.7.0 -- /Users/emilien/Projects/artimation-cbr/.venv/bin/python
+platform darwin -- Python 3.14.7, pytest-9.2.0, pluggy-1.7.0 -- <project>/.venv/bin/python
 cachedir: .pytest_cache
-rootdir: /Users/emilien/Projects/artimation-cbr
+rootdir: <project>
 configfile: pytest.ini
 plugins: anyio-4.15.1
 collecting ... collected 88 items
@@ -95,5 +95,5 @@ tests/test_web_ui.py::test_3d_view_drag_orbit_place_play[relief] PASSED  [ 97%]
 tests/test_web_ui.py::test_same_layers_2d_and_3d_and_backgrounds PASSED  [ 98%]
 tests/test_web_ui.py::test_manual_maneuvers_and_safe_headings_panel PASSED [100%]
 
-- generated xml file: /Users/emilien/Projects/artimation-cbr/artifacts/test-results.xml -
+- generated xml file: <project>/artifacts/test-results.xml -
 ======================== 88 passed in 81.90s (0:01:21) =========================

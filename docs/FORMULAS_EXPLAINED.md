@@ -1,8 +1,6 @@
 # Artimation Visu: formulas explained
 
-Speaker notes for the final slide, in plain English.
-
-> We look for trajectories that keep the aircraft separated. Among safe solutions, we try to limit detours and the number of aircraft that need to maneuver. Each method searches for a solution differently.
+We look for trajectories that keep the aircraft separated. Among safe solutions, we try to limit detours and the number of aircraft that need to maneuver. Each method searches for a solution differently.
 
 These explanations cover the toy demo: all aircraft remain at the same altitude, FL360, and the required minimum horizontal separation is 7 nautical miles (NM). GA, simulated annealing, MPC and MILP keep a speed of 360 knots. ORCA can change speed, up to 360 knots.
 
@@ -24,8 +22,6 @@ For two aircraft, we check one pair. For four aircraft, we check six pairs. Sinc
 
 For example, if two aircraft come as close as 6 NM, their plan violates our 7 NM requirement. Crossing the same point at different times does not necessarily create a conflict.
 
-**Say:** “We check the closest encounter during the whole flight, not just the positions currently visible on screen.”
-
 ## 2. Penalty: what makes a plan less attractive?
 
 ```text
@@ -42,8 +38,6 @@ This adds four penalties. A lower total is better.
 | `0.05 M` | Number of aircraft that maneuver, multiplied by 0.05. This encourages solutions that disturb fewer aircraft. |
 
 `max(0, ...)` prevents a negative penalty when separation exceeds the requirement. The weighted sum is a score used to compare plans; it is not a physical quantity or a probability.
-
-**Say:** “We penalize conflicts, how close the aircraft get, extra distance, and the number of aircraft we ask to maneuver.”
 
 ## 3. Fitness: turn the penalty into a score
 
@@ -65,8 +59,6 @@ P = 0.02 x 5 + 0.05 x 1 = 0.15
 F = 0.5 / 1.15 + 0.5 = approximately 0.935
 ```
 
-**Say:** “Fitness is our plan-quality score. Safety takes priority, then we prefer less disruption.”
-
 ## 4. Genetic algorithm: search for the highest fitness
 
 ```text
@@ -78,8 +70,6 @@ The algorithm maintains a population of candidate plans. Each candidate specifie
 It selects promising candidates, combines their aircraft maneuvers, and introduces small random changes. A **parent** is simply an existing complete candidate plan used to create another candidate. It is not an aircraft.
 
 For our two-aircraft case, a new candidate could take aircraft 1's maneuver from one parent and aircraft 2's maneuver from another. The new combination must be evaluated again because those maneuvers may conflict when used together.
-
-**Say:** “We generate many complete plans, score them, and use promising plans to produce new ones.”
 
 ## 5. Simulated annealing: the same score, a different search
 
@@ -101,8 +91,6 @@ For example, a worse proposal with `delta_E = 0.1` has about a 37% acceptance pr
 
 Accepted does not mean safe. The displayed result is the best plan encountered, which can differ from the last accepted plan.
 
-**Say:** “We modify one plan at a time. Early on, we sometimes accept a worse plan to escape a dead end. Later, we become more selective.”
-
 ## 6. ORCA: stay close to the desired velocity while avoiding conflicts
 
 ```text
@@ -112,15 +100,13 @@ subject to the ORCA avoidance constraints
 and ||v|| <= 0.1 NM/s
 ```
 
-`v` is a velocity vector: it describes both heading and speed. `v_desired`, shown as `v*` on the slide, points toward the destination. The squared distance between these vectors measures how much the chosen command differs from the desired one.
+`v` is a velocity vector: it describes both heading and speed. `v_desired` points toward the destination. The squared distance between these vectors measures how much the chosen command differs from the desired one.
 
 Each aircraft chooses the closest allowed velocity to its desired velocity. ORCA assigns each aircraft half of the required pairwise relative-velocity correction; this does not necessarily mean equal turns or equal detours.
 
 For our crossing aircraft, the correction can change their headings and reduce their speeds. The speed limit of 0.1 NM/s equals 360 knots.
 
 The constraints concern predicted encounters. The final executed trajectories are also checked with the common separation calculation. If the constraints cannot all be satisfied, the implementation records that explicitly.
-
-**Say:** “Each aircraft adjusts its heading and speed just enough to avoid the predicted encounter, while still trying to reach its destination.”
 
 ## 7. MPC: plan ahead, execute a short interval, then replan
 
@@ -144,8 +130,6 @@ For two aircraft approaching the crossing, it might select a turn for aircraft 2
 
 MPC describes this repeated planning process. Our implementation uses the catalogue MILP optimizer inside each planning step.
 
-**Say:** “We repeatedly ask: what is a good safe plan from where the aircraft are now? We execute only the beginning, then calculate again.”
-
 ## 8. MILP: choose compatible trajectories from a catalogue
 
 ```text
@@ -166,10 +150,8 @@ For example, suppose aircraft 1 and aircraft 2 each have a straight route and se
 
 The objective selects the cheapest compatible combination. When the search proves optimality, that means the best combination **within this catalogue**, not the best of every imaginable trajectory. A search stopped by its budget may return a feasible combination without proving it is the cheapest.
 
-**Say:** “We prepare route options, identify which combinations conflict, and choose one route per aircraft at the lowest cost.”
+## Reading the methods together
 
-## How to explain the whole slide
-
-> The left side explains how we measure safety and plan quality. The right side explains how each method searches. The genetic algorithm and simulated annealing directly use the common fitness. ORCA, MPC and MILP have their own objectives, and we then evaluate their resulting trajectories using the same separation and route-quality measurements.
+Sections 1 to 3 explain how we measure safety and plan quality. Sections 4 to 8 explain how each method searches. The genetic algorithm and simulated annealing directly use the common fitness. ORCA, MPC and MILP have their own objectives, and we then evaluate their resulting trajectories using the same separation and route-quality measurements.
 
 The methods have different decision rules, recording behavior and computational budgets. ORCA also has more freedom because it can vary speed. These demonstrations therefore do not establish a controlled performance ranking.
