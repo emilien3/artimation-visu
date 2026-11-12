@@ -59,7 +59,7 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 ## Documentation
 
 - [Formulas explained](docs/FORMULAS_EXPLAINED.md) · [PDF](docs/output/pdf/artimation_visu_formulas_guide_en.pdf), rebuilt with `pdflatex` from the `.tex` file next to it
-- [Presentation, 7 slides](docs/output/artimation_visu_demo_en_formulas.pptx) · [same deck with the formulas spread over 4 slides](docs/output/artimation_visu_demo_en_formulas_light.pptx)
+- [Presentation, formulas spread over 4 slides](docs/output/artimation_visu_demo_en_formulas_light.pptx)
 - [Audit: sources, comparison with the papers, ENAC validation, architecture](docs/AUDIT.md)
 
 ## Layout
