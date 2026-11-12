@@ -1,6 +1,7 @@
 # Artimation Visu
 
 ## Run
+Mac/Linux :
 
 ```bash
 git clone https://github.com/emilien3/artimation-visu.git
@@ -8,6 +9,15 @@ cd artimation-visu
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python app.py
+```
+
+Windows :
+```
+git clone https://github.com/emilien3/artimation-visu.git
+cd artimation-visu
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python app.py
 ```
 
 Open http://localhost:8501. Use `--port 8502` if the port is taken. Node.js is required for the tests and the dataset export.
