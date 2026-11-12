@@ -1,0 +1,169 @@
+% Source of artimation_visu_formulas_guide_en.pdf. Text mirrors docs/FORMULAS_EXPLAINED.md.
+% Build (twice, for the header): pdflatex artimation_visu_formulas_guide_en.tex
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,left=22mm,right=22mm,top=24mm,bottom=22mm,headsep=7mm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,tabularx,enumitem,fancyhdr,titlesec,microtype}
+\usepackage[hidelinks,pdftitle={Artimation Visu: formulas explained},pdfauthor={Artimation Visu},
+  pdfsubject={Plain-English guide to the demo's evaluation and five methods}]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\titleformat{\section}[hang]{\bfseries\Large}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{20pt}{8pt}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\footnotesize ARTIMATION VISU \textbullet\ FORMULAS EXPLAINED}
+\fancyfoot[R]{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlist[itemize]{topsep=2pt,itemsep=1pt,leftmargin=1.6em}
+\newcommand{\dmin}{d_{\min}}
+\begin{document}
+
+{\bfseries\LARGE Formulas explained}\\[2pt]
+Artimation Visu
+
+We look for trajectories that keep aircraft separated. Among safe solutions, we limit detours and the number of aircraft that maneuver. Each method searches differently.
+
+This covers the toy demo: all aircraft at FL360, minimum horizontal separation 7~NM. GA, simulated annealing, MPC and MILP keep 360 knots. ORCA can change speed, up to 360 knots.
+
+The coefficients are prototype choices, not aviation standards. The examples are illustrative calculations, not measured results.
+
+\section{Minimum separation: do the aircraft stay far enough apart?}
+\[
+\dmin \;=\; \min_{\substack{i<j\\ t\,\in\,\text{common flight time}}} \lVert p_i(t)-p_j(t)\rVert
+\qquad \text{Safe if } \dmin \ge 7\ \text{NM}
+\]
+\begin{itemize}
+\item $p_i(t)$: position of aircraft $i$ at time $t$.
+\item $\lVert p_i(t)-p_j(t)\rVert$: distance between two aircraft at the same instant.
+\item $\min$: the smallest distance over the whole flight and every aircraft pair.
+\end{itemize}
+Two aircraft make one pair, four make six. All aircraft share one altitude, so this is horizontal distance.
+
+Two aircraft that come within 6~NM violate the 7~NM requirement. Crossing the same point at different times is not necessarily a conflict.
+
+\section{Penalty: what makes a plan less attractive?}
+\[
+P = C + 10\,\max(0,\,7-\dmin) + 0.02\,\Delta L + 0.05\,M
+\]
+A lower total is better.
+
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Term & Meaning\\
+\midrule
+$C$ & Seconds in conflict, added across pairs (simultaneous conflicts count separately).\\
+$10\,\max(0,\,7-\dmin)$ & How far the closest encounter falls below 7~NM. At 6~NM it is 10; at 7~NM or more it is 0.\\
+$0.02\,\Delta L$ & Extra distance flown versus the original routes, summed over aircraft, in NM.\\
+$0.05\,M$ & Number of maneuvering aircraft times 0.05, to disturb fewer aircraft.\\
+\bottomrule
+\end{tabularx}
+
+$\max(0,\dots)$ avoids a negative penalty when separation exceeds the requirement. $P$ is a comparison score, not a physical quantity or a probability.
+
+\section{Fitness: turn the penalty into a score}
+\[
+F = \frac{0.5}{1+P} + 0.5\,I(\text{safe}),
+\qquad
+I(\text{safe}) = \begin{cases}1 & \text{if the plan is safe,}\\ 0 & \text{otherwise.}\end{cases}
+\]
+Higher is better. $F$ scores the whole joint plan, not one aircraft.
+
+The extra 0.5 puts every safe plan above every conflicting plan. Among safe plans, fewer detours and fewer maneuvering aircraft score higher. The implementation keeps this priority at numerical limits too.
+
+Example: a safe plan adds 5~NM in total and reroutes one aircraft.
+\begin{align*}
+&C = 0,\quad \text{separation shortfall} = 0,\quad \Delta L = 5,\quad M = 1\\
+&P = 0.02\times 5 + 0.05\times 1 = 0.15\\
+&F = \frac{0.5}{1.15} + 0.5 \approx 0.935
+\end{align*}
+
+\section{Genetic algorithm: search for the highest fitness}
+\[
+\max_{\text{joint maneuver plan}} F
+\]
+It keeps a population of candidate plans. Each candidate sets a maneuver for every aircraft: when to turn, the turn angle, and when to head back to the destination.
+
+It selects good candidates, combines their maneuvers and adds small random changes. A \textbf{parent} is an existing complete plan used to build a new one, not an aircraft.
+
+Example: a new candidate takes aircraft 1's maneuver from one parent and aircraft 2's from another. It must be evaluated again, because the two maneuvers may conflict together.
+
+\section{Simulated annealing: the same score, a different search}
+\[
+E = 1-F, \qquad \Pr(\text{accept}) = \min\!\left(1,\ \exp\!\left(-\frac{\Delta E}{T}\right)\right)
+\]
+$E$ is called energy but is just a cost: minimizing $E$ maximizes fitness.
+
+It starts from one joint plan and proposes one small change to one aircraft: shift the turn time, lengthen or shorten the leg, change the angle by 5 degrees, add a maneuver, or remove it. These moves belong to the annealer; it shares only the score with the genetic algorithm. $\Delta E$ is the proposed cost minus the current cost.
+\begin{itemize}
+\item A lower or equal cost is always accepted.
+\item A higher cost can still be accepted, to explore beyond the current plan.
+\item $T$, the temperature, sets how willing it is to accept a worse proposal. It starts high, decreases and has no physical unit.
+\end{itemize}
+Example: with $\Delta E = 0.1$ and $T = 0.1$, a worse proposal is accepted with about 37\% probability. As $T$ drops, that becomes less likely.
+
+Accepted does not mean safe. The result shown is the best plan encountered, which can differ from the last accepted one.
+
+\section{ORCA: stay close to the desired velocity while avoiding conflicts}
+\[
+\min_{v}\ \lVert v - v_{\text{desired}}\rVert^{2}
+\quad \text{subject to the ORCA avoidance constraints and } \lVert v\rVert \le 0.1\ \text{NM/s}
+\]
+$v$ is a velocity vector (heading and speed). $v_{\text{desired}}$ points toward the destination. The squared distance measures how far the chosen command is from the desired one.
+
+Each aircraft picks the allowed velocity closest to its desired velocity. ORCA gives each aircraft half of the required pairwise correction, which does not necessarily mean equal turns or detours.
+
+For crossing aircraft, the correction can change headings and reduce speeds. The limit of 0.1~NM/s equals 360 knots.
+
+The constraints cover predicted encounters. The executed trajectories are also checked with the common separation calculation. If the constraints cannot all be met, the implementation records it.
+
+\section{MPC: plan ahead, execute a short interval, then replan}
+\[
+\min_{\text{joint plan}}\ \sum_{i}\bigl(0.02\,\Delta L_i + 0.05\,m_i + 0.01\,q_i + 0.002\,r_i\bigr),
+\qquad
+q_i = \frac{\lVert v_{\text{first},i}-v_{\text{previous},i}\rVert^{2}}{v_{\text{nominal},i}^{2}}
+\]
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Symbol & Meaning\\
+\midrule
+$\Delta L_i$ & Extra distance in aircraft $i$'s proposed remaining route.\\
+$m_i$ & 1 if the aircraft maneuvers, otherwise 0.\\
+$q_i$ & Change from the previous velocity command to the next, scaled by nominal speed squared. Discourages abrupt changes.\\
+$r_i$ & Distance left to the destination at the end of the 400-second horizon. Smaller is better.\\
+\bottomrule
+\end{tabularx}
+
+MPC picks a plan from a finite catalogue, with separation constraints over the horizon. It plans 400 seconds ahead, executes only the next 20 seconds, updates the positions and repeats.
+
+Example: for two aircraft approaching the crossing, it may choose a turn for aircraft 2. After 20 seconds it reassesses the encounter and picks the next command. Speed stays fixed.
+
+Each planning step searches its own set of candidate maneuvers exactly (branch and bound). It does not call the MILP method.
+
+\section{MILP: choose compatible trajectories from a catalogue}
+\[
+\min_{x}\ \sum_{i,k} c_{ik}\,x_{ik},
+\qquad
+c_{ik} = 0.02\,\Delta L_{ik} + 0.05\,m_{ik}
+\]
+\[
+\sum_{k} x_{ik} = 1 \ \text{ for each aircraft } i,
+\qquad
+x_{ik} + x_{jl} \le 1 \ \text{ for conflicting options},
+\qquad
+x_{ik}\in\{0,1\}
+\]
+$x_{ik}$ is a yes/no choice: 1 when option $k$ is selected for aircraft $i$. $c_{ik}$ is its cost, from added distance and whether the aircraft maneuvers.
+
+The first constraint requires exactly one trajectory per aircraft. The second forbids selecting two conflicting options together.
+
+Example: aircraft 1 and 2 each have a straight route and several turning routes. If the straight routes conflict, the optimizer cannot pick both. It can pick a compatible pair instead, such as aircraft 1 straight and aircraft 2 turning.
+
+It selects the cheapest compatible combination. When optimality is proven, that is the best combination \textbf{within this catalogue}, not among all possible trajectories. A search stopped by its budget may return a feasible combination that is not proven cheapest.
+
+\section*{Reading the methods together}
+Sections 1 to 3 explain how we measure safety and plan quality. Sections 4 to 8 explain how each method searches. The genetic algorithm and simulated annealing use the common fitness directly. ORCA, MPC and MILP have their own objectives, and their resulting trajectories are evaluated with the same separation and route-quality measures.
+
+The methods differ in decision rules, recording behavior and computational budget, and ORCA can also vary speed. These demos therefore do not establish a controlled performance ranking.
+
+\end{document}

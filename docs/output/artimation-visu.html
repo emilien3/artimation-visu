@@ -154,8 +154,6 @@
 .fleet-item .fleet-meta{font-size:11px}.list-label{letter-spacing:.4px;gap:10px}.fleet-item{min-width:0}
 .sidebar,.main-panel{height:auto;min-height:0;overflow:visible}
 .fleet,.encounters,.safe-ranges{max-height:none;overflow:visible}
-.download-tool{margin-left:auto;color:var(--muted);font-size:12px;text-decoration:none;white-space:nowrap}
-.download-tool:hover{color:var(--mint)}
 .scenario-panel,.solver-panel,.inspector,.solution-panel{padding:18px 22px}
 .fleet-section{padding-top:18px;padding-bottom:18px}.generate-row{margin-top:16px}.add-button{margin-bottom:18px}
 .sidebar details>summary{font-size:14px;font-weight:600;cursor:pointer;color:var(--text)}
@@ -176,7 +174,7 @@
 .record-details{margin-top:12px}.record-details>summary{color:var(--muted);cursor:pointer;font-size:12px}
 .lab-path-key{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:12px 0 16px}
 .lab-export h2{margin:0 auto 0 0}.lab-browser{padding:12px}.lab-metrics>div{padding:10px 14px}.lab-metrics b{font-size:19px}
-@media(max-width:760px){.workspace{height:auto}.workspace-nav{padding:0 16px;gap:18px;flex-wrap:wrap}.workspace-nav nav{gap:18px}.workspace-nav [role=tab]{font-size:12px}.workspace-brand{font-size:18px}.download-tool{display:none}.lab-header{align-items:flex-start;flex-direction:column;gap:8px}.lab-advanced{position:static;width:min(360px,calc(100vw - 64px));box-shadow:none;margin-top:12px}.display-settings-body{max-height:65vh;overflow:auto}.lab-controls{gap:12px}.view-title .brand-mark{display:none}}
+@media(max-width:760px){.workspace{height:auto}.workspace-nav{padding:0 16px;gap:18px;flex-wrap:wrap}.workspace-nav nav{gap:18px}.workspace-nav [role=tab]{font-size:12px}.workspace-brand{font-size:18px}.lab-header{align-items:flex-start;flex-direction:column;gap:8px}.lab-advanced{position:static;width:min(360px,calc(100vw - 64px));box-shadow:none;margin-top:12px}.display-settings-body{max-height:65vh;overflow:auto}.lab-controls{gap:12px}.view-title .brand-mark{display:none}}
 </style>
 </head>
 <body>
@@ -186,7 +184,6 @@
     <button id="close-exploration" role="tab" aria-controls="studio" aria-selected="true">Studio</button>
     <button id="open-exploration" role="tab" aria-controls="exploration-lab" aria-selected="false" tabindex="-1">Trajectory Explorer</button>
   </nav>
-  <a class="download-tool" href="/download" download="artimation-visu.html">Download HTML</a>
 </header>
 <main class="workspace" id="studio" role="tabpanel" aria-labelledby="close-exploration">
   <aside class="sidebar">
@@ -248,7 +245,6 @@
         <p id="solution-help" class="solution-intro"></p>
       </div>
     </details>
-    <div class="sidebar-footer"><span id="model-note">3D · CONSTANT SPEED</span></div>
   </aside>
   <section class="main-panel">
     <div class="view-toolbar">
@@ -399,7 +395,8 @@
       const rx=other.x-own.x, ry=other.y-own.y, distance=Math.hypot(rx,ry), v=velocity(other);
       const win=verticalWindow(own,other,horizon,sepV);
       if(!win)continue; // Vertically separated over the whole horizon: no heading is blocked.
-      if(distance<separation){alreadyInside=true;blocked.push([0,360]);break;}
+      // Inside the cylinder only if the vertical window is open now; a later window is handled by sampling below.
+      if(distance<separation&&win[0]<=0){alreadyInside=true;blocked.push([0,360]);break;}
       if(horizon<=0)continue;
       const cuts=[0,360], partial=win[0]>0||win[1]<horizon;
       const riskAt=angle=>{
@@ -1187,7 +1184,15 @@
     });
   }
 
-  root.ConflictModel = {FT_PER_S, DEFAULT_WEIGHTS, fitnessWeights, makeRoute, routeFromAircraft, routeLength, maneuverPath, verticalProfile, fullPath, pathSamples, stateAt, pairStats, evaluate, evaluatePaths, instructions, interp, hActive, vActive, clamp, commandStart};
+  // Seeded generator (mulberry32) shared by the stochastic solvers; it belongs to no method.
+  function rng(seed) {
+    let a = (seed >>> 0) + 0x6D2B79F5;
+    const u = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    return {u, uniform: (lo, hi) => lo + (hi - lo) * u(), choice: arr => arr[Math.floor(u() * arr.length)], int: (lo, hi) => lo + Math.floor(u() * (hi - lo)),
+            normal: (m, s) => m + s * Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u())};
+  }
+
+  root.ConflictModel = {rng, FT_PER_S, DEFAULT_WEIGHTS, fitnessWeights, makeRoute, routeFromAircraft, routeLength, maneuverPath, verticalProfile, fullPath, pathSamples, stateAt, pairStats, evaluate, evaluatePaths, instructions, interp, hActive, vActive, clamp, commandStart};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.ConflictModel;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 </script><script>// Genetic conflict solver (port of src/artimation/ga.py) and heatmaps of explored candidates.
@@ -1197,13 +1202,7 @@
   const CM = root.ConflictModel || require('./model.js');
   const ALPHAS = [-40, -35, -30, -25, -20, -15, -10, -5, 5, 10, 15, 20, 25, 30, 35, 40]; // Observed ENAC range; idle genes handle 0°.
   const LEVELS = [-2000, -1000, 1000, 2000];                                       // Altitude offsets (ft) when `vertical` is enabled.
-  function rng(seed) { // mulberry32
-    let a = (seed >>> 0) + 0x6D2B79F5;
-    const u = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const r = {u, uniform: (lo, hi) => lo + (hi - lo) * u(), choice: arr => arr[Math.floor(u() * arr.length)], int: (lo, hi) => lo + Math.floor(u() * (hi - lo)),
-               normal: (m, s) => m + s * Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u())};
-    return r;
-  }
+  const rng = CM.rng;
   const DEFAULTS = {pop: 100, generations: 100, elite: 2, tournament: 3, pCross: 0.7, pMut: 0.4, immigrants: 0.1, seed: 0, sep: 7, sepV: 1000, vertical: false, window: Infinity};
 
   function randomGene(R, route, vertical, win) {
@@ -1292,13 +1291,57 @@
   root.GeneticSolver = {DEFAULTS, run, runSync, heatLayers, randomGene, mutate, rng};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.GeneticSolver;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-</script><script>// Classical simulated annealing: same genes, geometry and objective as the GA.
+</script><script>// Simulated annealing on the shared conflict model. Self-contained: its own state space, neighborhood,
+// acceptance rule and cooling schedule. It only uses the common trajectory evaluation (model.js).
+// State: one maneuver [t1, t2, alpha, dz] per aircraft, or the unchanged route. Energy: E = 1 - fitness.
 (function (root) {
   'use strict';
   const CM = root.ConflictModel || require('./model.js');
-  const GA = root.GeneticSolver || require('./ga.js');
+  const ANGLE_STEP = 5, ANGLE_MAX = 40;            // Heading changes on a 5 degree lattice, within +/-40 degrees.
+  const LEVELS = [-2000, -1000, 1000, 2000];       // Altitude offsets (ft) when `vertical` is enabled.
+  const HOLD = [20, 350];                          // Seconds flown on the new heading before turning back.
   const DEFAULTS = Object.freeze({iterations: 2379, temperatureStart: 0.15, temperatureEnd: 0.00001,
-    seed: 0, vertical: false, sep: 7, sepV: 1000, window: Infinity});
+    seed: 0, vertical: false, sep: 7, sepV: 1000, window: Infinity,
+    timeStep: 30, holdStep: 40, removeProbability: 0.1});
+  const idle = route => [route.t[0], route.t[0], 0, 0];
+  const isIdle = g => g[2] === 0 && g[3] === 0;
+  // Reflect a value into [lo, hi]: unlike clamping, this keeps the random walk symmetric at the bounds.
+  function reflect(v, lo, hi) {
+    if (!(hi > lo)) return lo;
+    const span = hi - lo, m = ((v - lo) % (2 * span) + 2 * span) % (2 * span);
+    return lo + (m <= span ? m : 2 * span - m);
+  }
+  // Draw a new maneuver for an aircraft on its original route.
+  function randomManeuver(R, route, vertical, win) {
+    const start = CM.commandStart(route), t1 = R.uniform(start, start + (win - start) * 0.9);
+    let alpha = ANGLE_STEP * R.int(1, ANGLE_MAX / ANGLE_STEP + 1) * (R.u() < 0.5 ? -1 : 1), dz = 0;
+    if (vertical) { const k = R.u(); if (k < 0.75) dz = R.choice(LEVELS); if (k < 0.5) alpha = 0; }
+    return [t1, t1 + R.uniform(HOLD[0], HOLD[1]), alpha, dz];
+  }
+  // One local move on one aircraft. Every move changes a single component by one step, adds a maneuver, or removes it.
+  function neighbor(R, g, route, cfg, win) {
+    const start = CM.commandStart(route);
+    if (win <= start) return idle(route);
+    if (isIdle(g)) return randomManeuver(R, route, cfg.vertical, win);
+    if (R.u() < cfg.removeProbability) return idle(route);
+    let [t1, t2, alpha, dz] = g;
+    const moves = ['time', 'hold'];
+    if (alpha !== 0) moves.push('angle');
+    if (cfg.vertical) moves.push('level');
+    const move = R.choice(moves);
+    if (move === 'time') { const hold = t2 - t1; t1 = reflect(t1 + R.normal(0, cfg.timeStep), start, start + (win - start) * 0.95); t2 = t1 + hold; }
+    else if (move === 'hold') t2 = t1 + reflect(t2 - t1 + R.normal(0, cfg.holdStep), HOLD[0], HOLD[1]);
+    else if (move === 'angle') {
+      // Step on the lattice {-40..-5, 5..40}: 0 is skipped, and both ends reflect.
+      const lattice = []; for (let a = -ANGLE_MAX; a <= ANGLE_MAX; a += ANGLE_STEP) if (a !== 0) lattice.push(a);
+      const k = lattice.indexOf(alpha) + (R.u() < 0.5 ? -1 : 1);
+      alpha = lattice[k < 0 ? 1 : k >= lattice.length ? lattice.length - 2 : k];
+    } else {
+      const options = [...LEVELS, ...(alpha !== 0 ? [0] : [])].filter(v => v !== dz);
+      dz = R.choice(options);
+    }
+    return [t1, t2, alpha, dz];
+  }
   function* run(routes, options) {
     const cfg = {...DEFAULTS, ...options};
     if (!routes.length || !Number.isInteger(cfg.iterations) || cfg.iterations < 1) throw new Error('A scenario and a positive integer iteration count are required');
@@ -1306,8 +1349,10 @@
       throw new Error('Temperatures must be positive and decreasing');
     if (!Number.isFinite(cfg.sep) || cfg.sep <= 0 || !Number.isFinite(cfg.sepV) || cfg.sepV < 0 || !Number.isInteger(cfg.seed)) throw new Error('Invalid separation or seed');
     if (typeof cfg.window !== 'number' || !(cfg.window > 0)) throw new Error('Horizon must be positive or Infinity');
+    if (![cfg.timeStep, cfg.holdStep].every(v => Number.isFinite(v) && v > 0) || !(cfg.removeProbability >= 0 && cfg.removeProbability <= 1))
+      throw new Error('Invalid neighborhood step sizes or removal probability');
     cfg.weights = CM.fitnessWeights(cfg.weights);
-    const R = GA.rng(cfg.seed), win = routes.map(r => Math.min(r.t[r.t.length - 1], cfg.window));
+    const R = CM.rng(cfg.seed), win = routes.map(r => Math.min(r.t[r.t.length - 1], cfg.window));
     const opts = {sep: cfg.sep, sepV: cfg.sepV, tmax: cfg.window, weights: cfg.weights};
     const rec = {genes: [], gen: [], origin: [], fit: [], dmin: [], conflict: [], perAircraft: [], accepted: [], temperature: [], parent: []};
     const cache = new Map();
@@ -1320,18 +1365,19 @@
       rec.parent.push(parent); rec.temperature.push(temperature);
       return id;
     }
-    let current = record(routes.map(r => [r.t[0], r.t[0], 0, 0]), 0, null, cfg.temperatureStart), bestIdx = current;
+    let current = record(routes.map(idle), 0, null, cfg.temperatureStart), bestIdx = current;
     rec.accepted.push(true);
     yield {gen: 0, best: rec.fit[bestIdx], evaluated: 1};
     for (let step = 1; step <= cfg.iterations; step++) {
       const fraction = (step - 1) / Math.max(1, cfg.iterations - 1), ratio = cfg.temperatureEnd / cfg.temperatureStart;
-      // Keep the default trace unchanged; interpolate logs when the ratio underflows.
+      // Geometric cooling; interpolate logarithms when the ratio underflows.
       const temperature = ratio > 0 ? cfg.temperatureStart * ratio ** fraction
         : step === 1 ? cfg.temperatureStart : step === cfg.iterations ? cfg.temperatureEnd
           : Math.exp((1 - fraction) * Math.log(cfg.temperatureStart) + fraction * Math.log(cfg.temperatureEnd));
       const genes = rec.genes[current].map(g => g.slice()), a = R.int(0, routes.length);
-      genes[a] = GA.mutate(R, genes[a], routes[a], cfg.vertical, win[a]);
+      genes[a] = neighbor(R, genes[a], routes[a], cfg, win[a]);
       const id = record(genes, step, current, temperature), delta = rec.fit[current] - rec.fit[id];
+      // Metropolis rule on E = 1 - fitness.
       const accepted = delta <= 0 || R.u() < Math.exp(-delta / temperature);
       rec.accepted.push(accepted);
       if (accepted) current = id;
@@ -1342,7 +1388,7 @@
     return {...rec, bestIdx, best: rec.genes[bestIdx], currentIdx: current, algorithm: 'simulated-annealing', cfg};
   }
   const runSync = (routes, options) => { const it = run(routes, options); let s; do { s = it.next(); } while (!s.done); return s.value; };
-  root.AnnealingSolver = {DEFAULTS, run, runSync};
+  root.AnnealingSolver = {DEFAULTS, run, runSync, neighbor, randomManeuver};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.AnnealingSolver;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 </script><script>// ORCA for the toy scenarios, with a velocity disc and reciprocal pairwise constraints.
@@ -1677,14 +1723,18 @@
   root.MILPSolver = {DEFAULTS, makeCatalogue, solveCatalogue, solveCatalogueSync, run, runSync};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.MILPSolver;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-</script><script>// Receding-horizon control: optimize a finite set of plans, execute one interval, then replan.
+</script><script>// Receding-horizon control. Self-contained: its own maneuver set, its own exact horizon optimizer and its own
+// replanning loop. It only uses the common trajectory model (model.js).
+// Each cycle: build candidate plans from the current positions, pick the cheapest conflict-free joint plan over the
+// prediction horizon, execute one control interval, then replan.
 (function (root) {
   'use strict';
   const CM = root.ConflictModel || require('./model.js');
-  const MILP = root.MILPSolver || require('./milp.js');
   const COST_WEIGHTS = Object.freeze({distance: 0.02, maneuver: 0.05, continuity: 0.01, terminal: 0.002});
   const DEFAULTS = Object.freeze({horizon: 400, controlStep: 20, maxTime: 1800, nodeLimit: 100000,
-    seed: 0, sep: 7, sepV: 1000, vertical: false, costWeights: COST_WEIGHTS});
+    seed: 0, sep: 7, sepV: 1000, vertical: false, costWeights: COST_WEIGHTS,
+    // Candidate maneuvers at each replan: turn after `starts` s, hold the heading for `holds` s, then fly direct.
+    starts: [0, 60], holds: [180, 300, 420], angles: [-40, -30, -20, -10, 10, 20, 30, 40]});
   const OBJECTIVE = 'sum_i(0.02*added_distance_nm_i + 0.05*maneuver_i + 0.01*||v_first_i-v_previous_i||^2/v_nominal_i^2 + 0.002*distance_to_goal_at_horizon_nm_i)';
   const last = a => a[a.length - 1];
   const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -1719,6 +1769,8 @@
         !Number.isFinite(cfg.sepV) || cfg.sepV < 0 || !Number.isInteger(cfg.nodeLimit) || cfg.nodeLimit < 1 || !Number.isInteger(cfg.seed))
       throw new Error('Invalid MPC horizon, interval, budget, separation or seed');
     if (cfg.vertical) throw new Error('MPC currently uses constant altitude');
+    for (const [values, valid] of [[cfg.starts, v => v >= 0], [cfg.holds, v => v > 0], [cfg.angles, v => v !== 0 && Math.abs(v) <= 40]])
+      if (!Array.isArray(values) || !values.every(v => Number.isFinite(v) && valid(v))) throw new Error('Invalid MPC maneuver timings or angles');
     if (!cfg.costWeights || Object.keys(cfg.costWeights).some(k => !Object.hasOwn(COST_WEIGHTS, k)) ||
         Object.values(cfg.costWeights).some(v => !Number.isFinite(v) || v < 0)) throw new Error('Invalid MPC cost weights');
     routes.forEach(r => {
@@ -1727,6 +1779,43 @@
           !Array.isArray(r.z) || r.z.length !== 2 || !r.z.every(Number.isFinite) || r.z[0] !== r.z[1] || distance(r.xy[0], r.xy[1]) <= 0)
         throw new Error('MPC requires straight, constant-altitude routes with a common start time');
     });
+  }
+
+  // Candidate plans for each aircraft from its current position: the direct route first, then every timed turn.
+  function candidatePlans(routes, cfg) {
+    return routes.map(route => {
+      const start = route.t[0], end = last(route.t), genes = [[start, start, 0, 0]], seen = new Set([JSON.stringify(genes[0])]);
+      for (const delay of cfg.starts) for (const hold of cfg.holds) for (const angle of cfg.angles) {
+        const t1 = start + delay, t2 = Math.min(end, t1 + hold);
+        if (!(t1 < end && t2 > t1)) continue;
+        const gene = [t1, t2, angle, 0], key = JSON.stringify(gene);
+        if (!seen.has(key)) { genes.push(gene); seen.add(key); }
+      }
+      return genes.map(gene => {
+        const path = CM.fullPath(route, gene);
+        return {gene, path, extra: Math.max(0, pathLength(path) - CM.routeLength(route)), maneuvering: Number(CM.hActive(route, gene))};
+      });
+    });
+  }
+  // Exact horizon optimization: one plan per aircraft, no conflicting pair before `tmax`, minimum total cost.
+  // Depth-first branch and bound; a node limit is reported and is never an optimality certificate.
+  function selectPlans(plans, costs, cfg) {
+    const n = plans.length, compatible = Array.from({length: n}, () => []);
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++)
+      compatible[a][b] = plans[a].map(p => plans[b].map(q => { const s = CM.pairStats(p.path, q.path, cfg.sep, cfg.sepV, cfg.tmax); return s.dmin >= cfg.sep && s.conflict === 0; }));
+    const order = costs.map(row => row.map((_, i) => i).sort((a, b) => row[a] - row[b] || a - b)), bound = new Array(n + 1).fill(0);
+    for (let a = n - 1; a >= 0; a--) bound[a] = bound[a + 1] + costs[a][order[a][0]];
+    const chosen = new Array(n);
+    let nodes = 0, best = null, bestCost = Infinity, limited = false;
+    (function visit(depth, cost) {
+      if (nodes >= cfg.nodeLimit) { limited = true; return; }
+      nodes++;
+      for (let a = 0; a < depth - 1; a++) if (!compatible[a][depth - 1][chosen[a]][chosen[depth - 1]]) return;
+      if (depth === n) { if (cost < bestCost) { best = chosen.slice(); bestCost = cost; } return; }
+      if (cost + bound[depth] >= bestCost) return;
+      for (const option of order[depth]) { chosen[depth] = option; visit(depth + 1, cost + costs[depth][option]); if (limited) return; }
+    })(0, 0);
+    return {choice: best, cost: bestCost, nodes, termination: limited ? 'node-limit' : best ? 'optimal' : 'infeasible'};
   }
 
   function* run(routes, options = {}) {
@@ -1756,21 +1845,20 @@
         const p = [last(executed[i].x), last(executed[i].y)], arrival = time + distance(p, goals[i]) / speed[i], z = routes[i].z[0];
         return CM.makeRoute([p, goals[i]], [time, arrival], [z, z]);
       });
-      // shortcut: optimize a finite maneuver catalogue; expand it for richer aircraft dynamics.
-      const catalogues = MILP.makeCatalogue(currentRoutes, {...cfg, vertical: false});
+      const catalogues = api.candidatePlans(currentRoutes, cfg);
       active.forEach((i, a) => {
         if (!previous || last(previous[i].t) <= time) return;
         const path = clip(previous[i], time), extra = Math.max(0, pathLength(path) - CM.routeLength(currentRoutes[a]));
         const key = JSON.stringify([path.t, path.x, path.y]);
         if (!catalogues[a].some(o => JSON.stringify([o.path.t, o.path.x, o.path.y]) === key))
-          catalogues[a].push({gene: null, path, cost: 0, extra, maneuvering: extra > 1e-7, shifted: true});
+          catalogues[a].push({gene: null, path, extra, maneuvering: extra > 1e-7, shifted: true});
       });
       const costs = catalogues.map((catalogue, a) => catalogue.map(o => {
         const i = active[a], v = velocityAt(o.path, time), delta = ((v[0] - velocities[i][0]) ** 2 + (v[1] - velocities[i][1]) ** 2) / (speed[i] ** 2);
         const terminal = distance(xyAt(o.path, time + cfg.horizon), goals[i]), w = cfg.costWeights;
         return w.distance * o.extra + w.maneuver * Number(o.maneuvering) + w.continuity * delta + w.terminal * terminal;
       }));
-      const solution = MILP.solveCatalogueSync(catalogues, {sep: cfg.sep, sepV: cfg.sepV, tmax: time + cfg.horizon, nodeLimit: cfg.nodeLimit, costs});
+      const solution = api.selectPlans(catalogues, costs, {sep: cfg.sep, sepV: cfg.sepV, tmax: time + cfg.horizon, nodeLimit: cfg.nodeLimit});
       if (!solution.choice) { termination = solution.termination; break; }
       const plans = previous ? previous.slice() : new Array(routes.length);
       active.forEach((i, a) => { plans[i] = catalogues[a][solution.choice[a]].path; });
@@ -1812,8 +1900,10 @@
     return rec;
   }
   const runSync = (routes, options) => { const it = run(routes, options); let s; do { s = it.next(); } while (!s.done); return s.value; };
-  root.MPCSolver = {DEFAULTS, COST_WEIGHTS, OBJECTIVE, run, runSync};
-  if (typeof module !== 'undefined' && module.exports) module.exports = root.MPCSolver;
+  // The loop calls these through `api` so tests can observe each optimization.
+  const api = {DEFAULTS, COST_WEIGHTS, OBJECTIVE, candidatePlans, selectPlans, run, runSync};
+  root.MPCSolver = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 </script><script>// Orthographic canvas view with drag orbit, wheel zoom and aircraft movement in a horizontal plane.
 // Same layers as the 2D view. Vertical axis: altitude, time or density relief.
@@ -2487,12 +2577,33 @@
   }
   const finite = v => Number.isFinite(v) ? v : null;
   const safe = (dmin, conflict, sep) => dmin >= sep && conflict === 0;
+  const SCHEMA_VERSION = 3;
+  const STEP = {genetic: 'generation', 'simulated-annealing': 'proposal number', orca: 'control step', mpc: 'replanning cycle', milp: 'search node'};
+  const OBJECTIVE = {genetic: 'fitness, maximized', 'simulated-annealing': 'energy = 1 - fitness, minimized',
+    orca: 'sum of squared deviations from the desired velocities, minimized', mpc: 'horizon cost, minimized', milp: 'catalogue cost, minimized'};
+  // The same instruction format for every method: one entry per straight leg actually flown.
+  function legs(aircraft, p) {
+    const out = [];
+    for (let k = 1; k < p.t.length; k++) {
+      const dt = p.t[k] - p.t[k - 1], vx = (p.x[k] - p.x[k - 1]) / dt, vy = (p.y[k] - p.y[k - 1]) / dt, speed = Math.hypot(vx, vy) * 3600;
+      const heading = speed > 1e-9 ? (Math.atan2(vx, -vy) * 180 / Math.PI + 360) % 360 : null, rate = (p.z[k] - p.z[k - 1]) / dt * 60, last = out[out.length - 1];
+      const turn = last && heading !== null && last.heading_deg !== null ? Math.abs(((heading - last.heading_deg + 540) % 360) - 180) : (last && heading === last.heading_deg ? 0 : Infinity);
+      if (last && turn < 1e-6 && Math.abs(speed - last.speed_kt) < 1e-6 && Math.abs(rate - last.vertical_rate_ft_min) < 1e-6) last.end_s = p.t[k];
+      else out.push({aircraft_index: aircraft, start_s: p.t[k - 1], end_s: p.t[k], heading_deg: heading, speed_kt: speed, vertical_rate_ft_min: rate});
+    }
+    return out;
+  }
+  // Method-specific instructions for gene-based searches that do not record their own.
+  const geneCommands = (routes, genes) => genes.flatMap((gene, a) => [
+    ...(CM.hActive(routes[a], gene) ? [{aircraft_index: a, t_s: gene[0], kind: 'turn', alpha_deg: gene[2]}, {aircraft_index: a, t_s: gene[1], kind: 'direct'}] : []),
+    ...(CM.vActive(routes[a], gene) ? [{aircraft_index: a, t_s: gene[0], kind: 'level', dz_ft: gene[3]}] : [])]);
 
   function dataset(scn, result) {
     const count = result.paths?.length ?? result.genes?.length;
     if (!count || (result.paths ?? result.genes).some(g => g.length !== scn.routes.length)) throw new Error('Invalid exploration trace');
     const cfg = result.cfg, algorithm = result.algorithm || 'genetic', annealing = algorithm === 'simulated-annealing';
     const modern = !['genetic', 'simulated-annealing'].includes(algorithm);
+    if (!Object.hasOwn(STEP, algorithm)) throw new Error('Unknown exploration algorithm');
     const opts = {sep: cfg.sep, sepV: cfg.sepV, tmax: cfg.tmax ?? cfg.window ?? Infinity, weights: cfg.weights};
     // Include every configuration value and the routes in the file identity.
     let fingerprint = 2166136261;
@@ -2509,6 +2620,20 @@
         pairs.push({aircraft_a: scn.ids[a], aircraft_b: scn.ids[b], min_equivalent_separation_nm: finite(stats.dmin),
           conflict_s: stats.conflict, label: safe(stats.dmin, stats.conflict, cfg.sep) ? 'safe' : 'unsafe'});
       }
+      const trajectories = scn.routes.map((route, a) => {
+          let p;
+          if (result.paths) {
+            const path = paths[a], times = [...new Set([...path.t, ...path.tz.filter(t => t >= path.t[0] && t <= path.t.at(-1))])].sort((a, b) => a - b);
+            p = {t: times, x: times.map(t => CM.interp(path.t, path.x, t)), y: times.map(t => CM.interp(path.t, path.y, t)), z: times.map(t => CM.interp(path.tz, path.z, t))};
+          } else p = CM.pathSamples(route, genes[a]);
+          const conflicts = pairs.filter(pair => (pair.aircraft_a === scn.ids[a] || pair.aircraft_b === scn.ids[a]) && pair.label === 'unsafe');
+          return {p, record: {aircraft_id: scn.ids[a], gene: genes?.[a]?.slice() ?? null, label: conflicts.length ? 'unsafe' : 'safe',
+            min_equivalent_separation_nm: finite(ev.perAircraft[a]), conflicting_aircraft: conflicts.map(pair => pair.aircraft_a === scn.ids[a] ? pair.aircraft_b : pair.aircraft_a),
+            knots: p.t.map((t, i) => ({t_s: t, x_nm: p.x[i], y_nm: p.y[i], z_ft: p.z[i]}))}};
+        });
+      // Every method reports the same keys; searches without their own record get the generic ones.
+      const method = {kind: candidateId === 0 ? 'baseline' : 'proposal', time_s: null, objective: annealing ? 1 - ev.fitness : ev.fitness, termination: null,
+        ...(modern ? {objective: null, ...result.meta?.[candidateId]} : {})};
       return {candidate_id: candidateId, first_seen_candidate_id: seen.get(key), step: result.gen[candidateId],
         generation: algorithm === 'genetic' ? result.gen[candidateId] : null, origin: result.origin[candidateId],
         accepted: annealing ? result.accepted[candidateId] : null, temperature: annealing ? result.temperature[candidateId] : null,
@@ -2517,24 +2642,14 @@
         acceptance_probability: annealing ? (candidateId === 0 ? 1 : Math.min(1, Math.exp((ev.fitness - result.fit[result.parent[candidateId]]) / result.temperature[candidateId]))) : null,
         fitness: ev.fitness, min_equivalent_separation_nm: finite(ev.dmin), conflict_s: ev.conflict, added_distance_nm: ev.extra,
         maneuvering_aircraft: ev.nMan, altitude_change_ft: ev.alt, pairs,
-        ...(modern ? {method: result.meta?.[candidateId] ?? null, commands: result.controls?.[candidateId] ?? []} : {}),
-        trajectories: scn.routes.map((route, a) => {
-          let p;
-          if (result.paths) {
-            const path = paths[a], times = [...new Set([...path.t, ...path.tz.filter(t => t >= path.t[0] && t <= path.t.at(-1))])].sort((a, b) => a - b);
-            p = {t: times, x: times.map(t => CM.interp(path.t, path.x, t)), y: times.map(t => CM.interp(path.t, path.y, t)), z: times.map(t => CM.interp(path.tz, path.z, t))};
-          } else p = CM.pathSamples(route, genes[a]);
-          const conflicts = pairs.filter(pair => (pair.aircraft_a === scn.ids[a] || pair.aircraft_b === scn.ids[a]) && pair.label === 'unsafe');
-          return {aircraft_id: scn.ids[a], gene: genes?.[a]?.slice() ?? null, label: conflicts.length ? 'unsafe' : 'safe',
-            min_equivalent_separation_nm: finite(ev.perAircraft[a]), conflicting_aircraft: conflicts.map(pair => pair.aircraft_a === scn.ids[a] ? pair.aircraft_b : pair.aircraft_a),
-            knots: p.t.map((t, i) => ({t_s: t, x_nm: p.x[i], y_nm: p.y[i], z_ft: p.z[i]}))};
-        })};
+        method, commands: trajectories.flatMap((tr, a) => legs(a, tr.p)),
+        method_commands: result.controls?.[candidateId] ?? (genes ? geneCommands(scn.routes, genes) : []),
+        trajectories: trajectories.map(tr => tr.record)};
     });
     const tag = {genetic: 'ga', 'simulated-annealing': 'sa', orca: 'orca', mpc: 'mpc', milp: 'milp'}[algorithm];
-    if (!tag) throw new Error('Unknown exploration algorithm');
     let solution = Object.hasOwn(result, 'finalIdx') ? result.finalIdx : result.bestIdx;
     if (algorithm === 'milp' && !result.certificate?.choice) solution = null;
-    return {schema_version: modern ? 2 : 1, algorithm, scenario_id: scn.key,
+    return {schema_version: SCHEMA_VERSION, algorithm, scenario_id: scn.key,
       run_id: `${scn.key}-${tag}-${cfg.seed ?? 0}-${modern ? 'plans' : annealing ? cfg.iterations : `${cfg.pop}x${cfg.generations}`}-${cfg.vertical ? '3d' : '2d'}-${fingerprint.toString(16).padStart(8, '0')}`,
       model: {name: 'Artimation Visu toy', coordinates: 'x east, y south', units: {position: 'NM', time: 's', altitude: 'ft', angle: 'deg'},
         gene_fields: ['t1_s', 't2_s', 'alpha_deg_left', 'dz_ft'], vertical_rate_ft_min: 1500,
@@ -2544,10 +2659,14 @@
         null_separation: 'No common flight interval; infinity in the evaluator.',
         sampling: 'Exact piecewise-linear knots, including vertical slope changes; interpolate linearly. No time-grid approximation.',
         trace: modern ? 'Complete stored plans only. Controller forecasts and actual execution have distinct method.kind values. Partial MILP tree nodes are not trajectory records.' : 'All recorded proposals, including duplicates and rejected annealing proposals. Retained GA elites and cached evaluations are not new distinct evaluations.',
+        step: STEP[algorithm], objective: OBJECTIVE[algorithm],
+        commands: 'Same format for every method: one entry per straight leg flown (start_s, end_s, heading_deg clockwise from north or null when stationary, speed_kt, vertical_rate_ft_min).',
+        method_commands: 'Instructions in the method\'s own terms: timed turns for genetic, annealing and MILP; control intervals for MPC; velocity commands for ORCA.',
+        solution: 'solution_candidate_id is the result to use: the best proposal for genetic and annealing, the proven assignment for MILP, the executed flight for ORCA and MPC. best_candidate_id is the highest fitness among all records and can be a forecast.',
         annealing_energy: annealing ? '1 - fitness; not a QUBO. Metropolis acceptance with geometric cooling.' : null},
       config: {...cfg, window: finite(opts.tmax), weights: CM.fitnessWeights(cfg.weights)},
-      ...(modern ? {solution_candidate_id: solution, solver_status: result.termination ?? result.diagnostics?.termination ?? null,
-        diagnostics: result.diagnostics ?? result.certificate ?? null} : {}),
+      solution_candidate_id: solution, solver_status: result.termination ?? result.diagnostics?.termination ?? (modern ? null : 'completed'),
+      diagnostics: result.diagnostics ?? result.certificate ?? null,
       aircraft_ids: scn.ids.slice(), routes: scn.routes.map((r, a) => ({aircraft_id: scn.ids[a], xy_nm: r.xy, t_s: r.t, z_ft: r.z, enac_start_nm: r.enacStart})),
       best_candidate_id: result.bestIdx, candidate_count: candidates.length, unique_candidate_count: seen.size, candidates};
   }
@@ -2557,8 +2676,7 @@
     const header = ['schema_version', 'run_id', 'scenario_id', 'algorithm', 'seed', 'candidate_id', 'first_seen_candidate_id', 'step', 'generation', 'origin', 'accepted', 'temperature', 'parent_candidate_id', 'energy', 'acceptance_probability',
       'joint_label', 'aircraft_id', 'trajectory_label', 'conflicting_aircraft', 't1_s', 't2_s', 'alpha_deg_left', 'dz_ft',
       'fitness', 'joint_conflict_s', 'joint_min_equivalent_separation_nm', 'trajectory_min_equivalent_separation_nm',
-      'knot_index', 't_s', 'x_nm', 'y_nm', 'z_ft'];
-    if (data.schema_version >= 2) header.push('record_type', 'controller_time_s', 'method_objective', 'method_status', 'commands_json');
+      'knot_index', 't_s', 'x_nm', 'y_nm', 'z_ft', 'record_type', 'controller_time_s', 'method_objective', 'method_status', 'commands_json'];
     const quote = v => v == null ? '' : `"${String(v).replaceAll('"', '""')}"`;
     const rows = [header.join(',')];
     for (const c of data.candidates) for (const tr of c.trajectories) {
@@ -2567,11 +2685,9 @@
         const row = [data.schema_version, data.run_id, data.scenario_id, data.algorithm, data.config.seed, c.candidate_id,
         c.first_seen_candidate_id, c.step, c.generation, c.origin, c.accepted, c.temperature, c.parent_candidate_id, c.energy, c.acceptance_probability, c.label, tr.aircraft_id, tr.label, tr.conflicting_aircraft.join('|'), ...(tr.gene ?? [null, null, null, null]),
         c.fitness, c.conflict_s, c.min_equivalent_separation_nm, tr.min_equivalent_separation_nm, i, p.t_s, p.x_nm, p.y_nm, p.z_ft];
-        if (data.schema_version >= 2) {
-          const aircraft = data.aircraft_ids.indexOf(tr.aircraft_id);
-          row.push(c.method?.kind, c.method?.time_s, c.method?.objective, c.method?.termination,
-            i === 0 ? JSON.stringify(c.commands.filter(command => command.aircraft_index === aircraft)) : null);
-        }
+        const aircraft = data.aircraft_ids.indexOf(tr.aircraft_id);
+        row.push(c.method.kind, c.method.time_s, c.method.objective, c.method.termination,
+          i === 0 ? JSON.stringify(c.commands.filter(command => command.aircraft_index === aircraft)) : null);
         rows.push(row.map(quote).join(','));
       });
     }
@@ -2586,7 +2702,6 @@
   'use strict';
   const $ = id => document.getElementById(id), E = TrajectoryExploration, CM = ConflictModel;
   const COLORS = ['#ffcb78', '#94bcff', '#d3a5ff', '#6be6e0'], SAFE = '#64dfcb', UNSAFE = '#ff8c83';
-  if (location.protocol === 'file:') document.querySelector('.download-tool').hidden = true;
   const state = {data: null, running: false, revision: 0, ids: [], cursor: 0, bounds: null, time: 0};
   let playingSearch = false;
   const fmt = (n, digits = 2) => n == null ? '—' : n.toFixed(digits);
