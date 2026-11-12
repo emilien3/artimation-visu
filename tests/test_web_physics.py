@@ -44,6 +44,16 @@ def test_extended_js_equals_python_with_altitude(horizon, sep):
         assert p["risk"] == e["risk"] and p["distance"] == pytest.approx(e["distance"], abs=1e-6) and p["vertical_sep"] == pytest.approx(e["vsep"], abs=1e-6)
 
 
+def test_horizontally_close_but_vertically_separated_now_does_not_block_every_heading():
+    # B is 2 NM away but 1,800 ft above and descending: the vertical window opens later, so A can still fly away.
+    pair = [Ac("A", 60, 45, 360, 0, z=36000), Ac("B", 62, 45, 360, 0, z=37800, vz=-435)]
+    ref = run(EXTENDED, pair, 10, 5, sep_v=1000)["headingSpace"]["A"]
+    py = heading_space3d(pair, "A", 10, 5, 1000)
+    assert not ref["alreadyInside"] and not py["already_inside"]
+    assert 0 < ref["safeDegrees"] < 360
+    assert py["safe_degrees"] == pytest.approx(ref["safeDegrees"], abs=0.5)
+
+
 def test_extended_js_density_equals_python_with_altitude():
     d = dict(cols=80, rows=60, sigma=1.5)
     js = run(EXTENDED, STACKED, 10, 7, sep_v=1000, density=d)["density"]

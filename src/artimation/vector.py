@@ -264,7 +264,7 @@ def heading_space3d(aircraft, selected_id, horizon, separation, sep_v, step=0.05
     others = [o for o in aircraft if o.id != selected_id]
     return dict(safe=safe, unsafe=unsafe, safe_degrees=sum(hi - lo for lo, hi in safe),
                 current_safe=not any(encounter3d(own, o, horizon, separation, sep_v)["risk"] for o in others),
-                already_inside=any(hypot(o.x - own.x, o.y - own.y) < separation and vertical_window(own, o, horizon, sep_v) is not None for o in others))
+                already_inside=any(hypot(o.x - own.x, o.y - own.y) < separation and (vertical_window(own, o, horizon, sep_v) or (1, 0))[0] <= 0 for o in others))
 
 
 def density_maps3d(aircraft, horizon=10.0, separation=5.0, sep_v=1000.0, cols=160, rows=120, width=120.0, height=90.0, sigma=1.5, ids=None):

@@ -81,6 +81,7 @@ Scenario 10's original final solution is unsafe: **6.399745 NM**, reproduced exa
 - Vertical instructions could announce the return before the target level was reached.
 - The interface mixed two assumptions: encounter analysis ignores future maneuvers, while the solution panel includes them. Both are now labeled.
 - Search angles now include −40° and +40°.
+- Heading space with altitude: an intruder horizontally inside the separation radius but vertically separated at the current time blocked every heading. Headings are now blocked outright only when the vertical window is already open; otherwise they are sampled like any partial window.
 
 ## Architecture
 

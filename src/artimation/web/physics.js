@@ -43,7 +43,8 @@
       const rx=other.x-own.x, ry=other.y-own.y, distance=Math.hypot(rx,ry), v=velocity(other);
       const win=verticalWindow(own,other,horizon,sepV);
       if(!win)continue; // Vertically separated over the whole horizon: no heading is blocked.
-      if(distance<separation){alreadyInside=true;blocked.push([0,360]);break;}
+      // Inside the cylinder only if the vertical window is open now; a later window is handled by sampling below.
+      if(distance<separation&&win[0]<=0){alreadyInside=true;blocked.push([0,360]);break;}
       if(horizon<=0)continue;
       const cuts=[0,360], partial=win[0]>0||win[1]<horizon;
       const riskAt=angle=>{
