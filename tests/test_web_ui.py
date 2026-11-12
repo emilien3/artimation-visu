@@ -548,7 +548,7 @@ def test_fitness_controls_and_ga_kernel(app):
     assert js(app, f'return {V}.evaluate().fitness') == js(app, f'return {V}.state.ga.fit[{V}.state.ga.bestIdx]')
 
 
-def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app):
+def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app, tmp_path):
     def scene(distance, altitude):
         js(app, f"""const s={V}.state; s.rev++; s.time=0; s.source='none';
           s.aircraft=[{{id:'A',x:40,y:40,z:36000,speed:360,heading:90,vz:0}},
@@ -566,7 +566,7 @@ def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app):
     scene(6, 1000)
     assert not app.find_elements(By.CSS_SELECTOR, '[data-zone][data-conflict="true"]')
     assert 'VERTICALLY SEPARATED' in app.find_element(By.CSS_SELECTOR, '[data-zone-pair]').text
-    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'docs' / 'output' / 'artifacts' / 'vertically-separated-zones.png'))
+    app.find_element(By.ID, 'radar-wrap').screenshot(str(tmp_path / 'vertically-separated-zones.png'))
     scene(7, 0)
     assert not app.find_elements(By.CSS_SELECTOR, '[data-zone-pair]')
     scene(6, 1000)
@@ -581,7 +581,7 @@ def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app):
     set_details(app.find_element(By.ID, "display-settings"), False)
     pick(app, 'view', '3d')
     assert js(app, f'return {V}.view3d().data.aircraft.every(a=>a.zone.radius===3.5 && a.zone.halfHeight===500 && !a.zone.conflict)')
-    app.find_element(By.ID, 'radar-wrap').screenshot(str(Path(__file__).resolve().parents[1] / 'docs' / 'output' / 'artifacts' / 'separation-cylinders-3d.png'))
+    app.find_element(By.ID, 'radar-wrap').screenshot(str(tmp_path / 'separation-cylinders-3d.png'))
     # Capture rendered cylinder radii, not only the view input.
     assert js(app, f"""const v={V}.view3d(), original=v.circle, radii=[];
       v.circle=function(c,x,y,r,...args){{radii.push(r);return original.call(this,c,x,y,r,...args)}};
