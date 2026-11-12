@@ -1,9 +1,5 @@
 # Artimation Visu
 
-Teaching prototype for aircraft conflict resolution. It extends Christophe Hurter's ENAC [Vector](https://recherche.enac.fr/~hurter/NextQCM/) crossing studio with altitude maneuvers, a genetic solver, explored-trajectory heatmaps and a 3D view.
-
-Inspired by Hurter et al. ([2022](https://doi.org/10.1016/j.trpro.2022.12.027), [2024](https://doi.org/10.5220/0012471900003636)) and the SESAR [ARTIMATION](https://www.sesarju.eu/projects/artimation) project. It does **not** contain Nicolas Durand's original solver and does not reproduce the user studies.
-
 ## Run
 
 ```bash
@@ -20,7 +16,7 @@ Open http://localhost:8501. Use `--port 8502` if the port is taken. Node.js is r
 
 - **Studio:** place and drag aircraft, edit heading, speed and altitude, play the situation, and inspect encounters. Run the genetic solver to get a conflict-free solution with controller instructions, 2D and 3D views, and a heatmap of the explored trajectories.
 - **Trajectory Explorer:** two- and four-aircraft toy scenarios (all at FL360, 7 NM separation). Browse every recorded joint plan, inspect each aircraft's safe and conflicting paths, and export JSON and labeled CSV datasets.
-- **Five methods:** genetic algorithm, simulated annealing, ORCA, MPC and MILP. They are demonstrations, not a controlled performance ranking.
+- **Five methods:** genetic algorithm, simulated annealing, ORCA, MPC and MILP.
 
 The separation cylinder is 7 NM horizontally and 1,000 ft vertically. A conflict requires both limits to be violated.
 
@@ -44,7 +40,7 @@ The UI tests (Selenium) need Firefox. Reports from past runs are in `docs/output
 ## Documentation
 
 - [Formulas explained](docs/FORMULAS_EXPLAINED.md) · [PDF](docs/output/pdf/artimation_visu_formulas_guide_en.pdf)
-- [Presentation, 7 slides](docs/output/artimation_visu_demo_en_formulas.pptx)
+- [Presentation, 7 slides](docs/output/artimation_visu_demo_en_formulas.pptx) · [same deck with the formulas spread over 4 slides](docs/output/artimation_visu_demo_en_formulas_light.pptx)
 - [Audit: sources, comparison with the papers, ENAC validation, architecture](docs/AUDIT.md)
 
 ## Layout
