@@ -247,7 +247,7 @@ def test_planning_methods_result_filters_and_schema_two_downloads(app, scenario,
     # Use JSON's representation, including omitted undefined fields and number encoding.
     data = json.loads(js(app, "return JSON.stringify(TrajectoryExplorer.state.data)"))
     assert data is not None, app.find_element(By.ID, "lab-status").text
-    assert data["schema_version"] == 2 and data["algorithm"] == method
+    assert data["schema_version"] == 3 and data["algorithm"] == method
     assert data["scenario_id"] == scenario and len(data["aircraft_ids"]) == aircraft_count
     assert data["solver_status"] == {"orca": "reached_goals", "mpc": "completed", "milp": "optimal"}[method]
     assert len(app.find_elements(By.CSS_SELECTOR, "#lab-aircraft-plots canvas")) == aircraft_count
@@ -280,7 +280,7 @@ def test_planning_methods_result_filters_and_schema_two_downloads(app, scenario,
         count = 0
         for row in rows:
             count += 1
-            assert None not in row and row["schema_version"] == "2" and row["trajectory_label"] == label
+            assert None not in row and row["schema_version"] == "3" and row["trajectory_label"] == label
             assert row["record_type"]
             if row["knot_index"] == "0":
                 commands = json.loads(row["commands_json"])

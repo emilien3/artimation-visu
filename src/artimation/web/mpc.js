@@ -1,11 +1,15 @@
-// Receding-horizon control: optimize a finite set of plans, execute one interval, then replan.
+// Receding-horizon control. Self-contained: its own maneuver set, its own exact horizon optimizer and its own
+// replanning loop. It only uses the common trajectory model (model.js).
+// Each cycle: build candidate plans from the current positions, pick the cheapest conflict-free joint plan over the
+// prediction horizon, execute one control interval, then replan.
 (function (root) {
   'use strict';
   const CM = root.ConflictModel || require('./model.js');
-  const MILP = root.MILPSolver || require('./milp.js');
   const COST_WEIGHTS = Object.freeze({distance: 0.02, maneuver: 0.05, continuity: 0.01, terminal: 0.002});
   const DEFAULTS = Object.freeze({horizon: 400, controlStep: 20, maxTime: 1800, nodeLimit: 100000,
-    seed: 0, sep: 7, sepV: 1000, vertical: false, costWeights: COST_WEIGHTS});
+    seed: 0, sep: 7, sepV: 1000, vertical: false, costWeights: COST_WEIGHTS,
+    // Candidate maneuvers at each replan: turn after `starts` s, hold the heading for `holds` s, then fly direct.
+    starts: [0, 60], holds: [180, 300, 420], angles: [-40, -30, -20, -10, 10, 20, 30, 40]});
   const OBJECTIVE = 'sum_i(0.02*added_distance_nm_i + 0.05*maneuver_i + 0.01*||v_first_i-v_previous_i||^2/v_nominal_i^2 + 0.002*distance_to_goal_at_horizon_nm_i)';
   const last = a => a[a.length - 1];
   const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -40,6 +44,8 @@
         !Number.isFinite(cfg.sepV) || cfg.sepV < 0 || !Number.isInteger(cfg.nodeLimit) || cfg.nodeLimit < 1 || !Number.isInteger(cfg.seed))
       throw new Error('Invalid MPC horizon, interval, budget, separation or seed');
     if (cfg.vertical) throw new Error('MPC currently uses constant altitude');
+    for (const [values, valid] of [[cfg.starts, v => v >= 0], [cfg.holds, v => v > 0], [cfg.angles, v => v !== 0 && Math.abs(v) <= 40]])
+      if (!Array.isArray(values) || !values.every(v => Number.isFinite(v) && valid(v))) throw new Error('Invalid MPC maneuver timings or angles');
     if (!cfg.costWeights || Object.keys(cfg.costWeights).some(k => !Object.hasOwn(COST_WEIGHTS, k)) ||
         Object.values(cfg.costWeights).some(v => !Number.isFinite(v) || v < 0)) throw new Error('Invalid MPC cost weights');
     routes.forEach(r => {
@@ -48,6 +54,43 @@
           !Array.isArray(r.z) || r.z.length !== 2 || !r.z.every(Number.isFinite) || r.z[0] !== r.z[1] || distance(r.xy[0], r.xy[1]) <= 0)
         throw new Error('MPC requires straight, constant-altitude routes with a common start time');
     });
+  }
+
+  // Candidate plans for each aircraft from its current position: the direct route first, then every timed turn.
+  function candidatePlans(routes, cfg) {
+    return routes.map(route => {
+      const start = route.t[0], end = last(route.t), genes = [[start, start, 0, 0]], seen = new Set([JSON.stringify(genes[0])]);
+      for (const delay of cfg.starts) for (const hold of cfg.holds) for (const angle of cfg.angles) {
+        const t1 = start + delay, t2 = Math.min(end, t1 + hold);
+        if (!(t1 < end && t2 > t1)) continue;
+        const gene = [t1, t2, angle, 0], key = JSON.stringify(gene);
+        if (!seen.has(key)) { genes.push(gene); seen.add(key); }
+      }
+      return genes.map(gene => {
+        const path = CM.fullPath(route, gene);
+        return {gene, path, extra: Math.max(0, pathLength(path) - CM.routeLength(route)), maneuvering: Number(CM.hActive(route, gene))};
+      });
+    });
+  }
+  // Exact horizon optimization: one plan per aircraft, no conflicting pair before `tmax`, minimum total cost.
+  // Depth-first branch and bound; a node limit is reported and is never an optimality certificate.
+  function selectPlans(plans, costs, cfg) {
+    const n = plans.length, compatible = Array.from({length: n}, () => []);
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++)
+      compatible[a][b] = plans[a].map(p => plans[b].map(q => { const s = CM.pairStats(p.path, q.path, cfg.sep, cfg.sepV, cfg.tmax); return s.dmin >= cfg.sep && s.conflict === 0; }));
+    const order = costs.map(row => row.map((_, i) => i).sort((a, b) => row[a] - row[b] || a - b)), bound = new Array(n + 1).fill(0);
+    for (let a = n - 1; a >= 0; a--) bound[a] = bound[a + 1] + costs[a][order[a][0]];
+    const chosen = new Array(n);
+    let nodes = 0, best = null, bestCost = Infinity, limited = false;
+    (function visit(depth, cost) {
+      if (nodes >= cfg.nodeLimit) { limited = true; return; }
+      nodes++;
+      for (let a = 0; a < depth - 1; a++) if (!compatible[a][depth - 1][chosen[a]][chosen[depth - 1]]) return;
+      if (depth === n) { if (cost < bestCost) { best = chosen.slice(); bestCost = cost; } return; }
+      if (cost + bound[depth] >= bestCost) return;
+      for (const option of order[depth]) { chosen[depth] = option; visit(depth + 1, cost + costs[depth][option]); if (limited) return; }
+    })(0, 0);
+    return {choice: best, cost: bestCost, nodes, termination: limited ? 'node-limit' : best ? 'optimal' : 'infeasible'};
   }
 
   function* run(routes, options = {}) {
@@ -77,21 +120,20 @@
         const p = [last(executed[i].x), last(executed[i].y)], arrival = time + distance(p, goals[i]) / speed[i], z = routes[i].z[0];
         return CM.makeRoute([p, goals[i]], [time, arrival], [z, z]);
       });
-      // shortcut: optimize a finite maneuver catalogue; expand it for richer aircraft dynamics.
-      const catalogues = MILP.makeCatalogue(currentRoutes, {...cfg, vertical: false});
+      const catalogues = api.candidatePlans(currentRoutes, cfg);
       active.forEach((i, a) => {
         if (!previous || last(previous[i].t) <= time) return;
         const path = clip(previous[i], time), extra = Math.max(0, pathLength(path) - CM.routeLength(currentRoutes[a]));
         const key = JSON.stringify([path.t, path.x, path.y]);
         if (!catalogues[a].some(o => JSON.stringify([o.path.t, o.path.x, o.path.y]) === key))
-          catalogues[a].push({gene: null, path, cost: 0, extra, maneuvering: extra > 1e-7, shifted: true});
+          catalogues[a].push({gene: null, path, extra, maneuvering: extra > 1e-7, shifted: true});
       });
       const costs = catalogues.map((catalogue, a) => catalogue.map(o => {
         const i = active[a], v = velocityAt(o.path, time), delta = ((v[0] - velocities[i][0]) ** 2 + (v[1] - velocities[i][1]) ** 2) / (speed[i] ** 2);
         const terminal = distance(xyAt(o.path, time + cfg.horizon), goals[i]), w = cfg.costWeights;
         return w.distance * o.extra + w.maneuver * Number(o.maneuvering) + w.continuity * delta + w.terminal * terminal;
       }));
-      const solution = MILP.solveCatalogueSync(catalogues, {sep: cfg.sep, sepV: cfg.sepV, tmax: time + cfg.horizon, nodeLimit: cfg.nodeLimit, costs});
+      const solution = api.selectPlans(catalogues, costs, {sep: cfg.sep, sepV: cfg.sepV, tmax: time + cfg.horizon, nodeLimit: cfg.nodeLimit});
       if (!solution.choice) { termination = solution.termination; break; }
       const plans = previous ? previous.slice() : new Array(routes.length);
       active.forEach((i, a) => { plans[i] = catalogues[a][solution.choice[a]].path; });
@@ -133,6 +175,8 @@
     return rec;
   }
   const runSync = (routes, options) => { const it = run(routes, options); let s; do { s = it.next(); } while (!s.done); return s.value; };
-  root.MPCSolver = {DEFAULTS, COST_WEIGHTS, OBJECTIVE, run, runSync};
-  if (typeof module !== 'undefined' && module.exports) module.exports = root.MPCSolver;
+  // The loop calls these through `api` so tests can observe each optimization.
+  const api = {DEFAULTS, COST_WEIGHTS, OBJECTIVE, candidatePlans, selectPlans, run, runSync};
+  root.MPCSolver = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

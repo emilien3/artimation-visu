@@ -27,7 +27,16 @@ node scripts/export_exploration.cjs                       # GA and annealing
 node scripts/export_exploration.cjs --methods all --out docs/output/artifacts/five-methods
 ```
 
-Existing files are never overwritten. Formulas are in [FORMULAS_EXPLAINED.md](docs/FORMULAS_EXPLAINED.md).
+Existing files are never overwritten.
+
+Every method writes the same format (schema version 3): the same JSON keys and the same 37 CSV columns.
+
+- `solution_candidate_id` is the result to use: the best proposal for the genetic algorithm and annealing, the proven assignment for MILP, the executed flight for ORCA and MPC. `best_candidate_id` is the highest fitness among all records and can be a forecast.
+- `commands` has one entry per straight leg flown (`start_s`, `end_s`, `heading_deg`, `speed_kt`, `vertical_rate_ft_min`), identical for every method. `method_commands` keeps each method's own instructions.
+- `method` always has `kind`, `time_s`, `objective` and `termination`. `model.step` and `model.objective` say what the step counter and the objective mean for that method.
+- `gene` is empty for ORCA and MPC, which do not use genes. Files written before this version (schema 1 or 2) have fewer fields.
+
+Formulas are in [FORMULAS_EXPLAINED.md](docs/FORMULAS_EXPLAINED.md).
 
 ## Tests
 

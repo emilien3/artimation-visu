@@ -81,6 +81,9 @@ Scenario 10's original final solution is unsafe: **6.399745 NM**, reproduced exa
 - Vertical instructions could announce the return before the target level was reached.
 - The interface mixed two assumptions: encounter analysis ignores future maneuvers, while the solution panel includes them. Both are now labeled.
 - Search angles now include −40° and +40°.
+- Simulated annealing reused the genetic mutation as its move and the GA's random generator. It now has its own neighborhood (one component per move, symmetric steps that reflect at the bounds, explicit add and remove moves). Its traces and the slide 5 example changed; the generator moved to `model.js`.
+- MPC called the MILP module for its candidates and its horizon optimization. It now builds its own candidate maneuvers and runs its own exact search. Its traces are unchanged.
+- Exports used two schemas (genetic and annealing without solver status, solution identifier or commands) and three command formats. All five methods now write one schema (version 3) with a common leg-by-leg command list.
 - Heading space with altitude: an intruder horizontally inside the separation radius but vertically separated at the current time blocked every heading. Headings are now blocked outright only when the vertical window is already open; otherwise they are sampled like any partial window.
 
 ## Architecture
@@ -91,7 +94,7 @@ The original Vector uses x to the right and y downward, headings clockwise from 
 |---|---|
 | `physics.js`, `density.js`, `density-view.js` | Vector physics and heading density, extended with vertical separation |
 | `model.js` | Routes, timed maneuvers, continuous trajectory evaluation |
-| `ga.js`, `annealing.js`, `orca.js`, `mpc.js`, `milp.js` | The five solvers |
+| `ga.js`, `annealing.js`, `orca.js`, `mpc.js`, `milp.js` | The five solvers. Each depends on `model.js` only, never on another solver. |
 | `exploration.js`, `exploration-view.js` | Trajectory Explorer and dataset export |
 | `view3d.js` | 3D view |
 | `app.js`, `index.html`, `charts.js` | UI, scenarios, charts |

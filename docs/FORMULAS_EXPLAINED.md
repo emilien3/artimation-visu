@@ -81,7 +81,7 @@ Probability of accepting a proposal = min(1, exp(-delta_E / T))
 
 `E` is called energy but is just a cost: minimizing `E` maximizes fitness.
 
-It starts from one joint plan and proposes changes to one aircraft's maneuver. `delta_E` is the proposed cost minus the current cost.
+It starts from one joint plan and proposes one small change to one aircraft: shift the turn time, lengthen or shorten the leg, change the angle by 5 degrees, add a maneuver, or remove it. These moves belong to the annealer; it shares only the score with the genetic algorithm. `delta_E` is the proposed cost minus the current cost.
 
 - A lower or equal cost is always accepted.
 - A higher cost can still be accepted, to explore beyond the current plan.
@@ -128,7 +128,7 @@ MPC picks a plan from a finite catalogue, with separation constraints over the h
 
 Example: for two aircraft approaching the crossing, it may choose a turn for aircraft 2. After 20 seconds it reassesses the encounter and picks the next command. Speed stays fixed.
 
-Each planning step uses the catalogue MILP optimizer.
+Each planning step searches its own set of candidate maneuvers exactly (branch and bound). It does not call the MILP method.
 
 ## 8. MILP: choose compatible trajectories from a catalogue
 

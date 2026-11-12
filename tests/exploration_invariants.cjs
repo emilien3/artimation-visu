@@ -51,6 +51,23 @@ for (let i = 1; i < rec.genes.length; i++) {
   if (rec.accepted[i]) current = i;
 }
 assert.equal(rec.currentIdx, current);
+// The annealer is self-contained: its own neighborhood, no genetic operator.
+const annealingSource = require('node:fs').readFileSync(require.resolve('../src/artimation/web/annealing.js'), 'utf8');
+assert(!/ga\.js|GeneticSolver|mutate/.test(annealingSource), 'Simulated annealing must not depend on the genetic algorithm');
+{
+  const R = CM.rng(11), route = scn.routes[0], cfg = {...SA.DEFAULTS, vertical: true};
+  let g = SA.randomManeuver(R, route, true, 600), removed = 0;
+  for (let k = 0; k < 4000; k++) {
+    const next = SA.neighbor(R, g, route, cfg, 600);
+    if (next[2] === 0 && next[3] === 0) { removed++; g = SA.neighbor(R, next, route, cfg, 600); continue; }
+    const changed = [next[0] !== g[0], Math.abs((next[1] - next[0]) - (g[1] - g[0])) > 1e-9, next[2] !== g[2], next[3] !== g[3]].filter(Boolean).length;
+    assert(changed <= 1, 'A local move changes one component');
+    assert(next[0] >= 0 && next[0] <= 570 && next[1] - next[0] >= 20 - 1e-9 && next[1] - next[0] <= 350 + 1e-9);
+    assert(Math.abs(next[2]) <= 40 && next[2] % 5 === 0 && Math.abs(next[2] - g[2]) <= 10);
+    g = next;
+  }
+  assert(removed > 200 && removed < 600, 'Removal follows its configured probability');
+}
 assert.equal(rec.fit[rec.bestIdx], Math.max(...rec.fit));
 assert(rec.accepted[rec.bestIdx]);
 const exported = E.dataset(scn, rec);

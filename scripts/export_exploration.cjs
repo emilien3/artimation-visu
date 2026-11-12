@@ -35,8 +35,8 @@ function main(args) {
       safe: data.candidates.filter(c => c.label === 'safe').length, unsafe: data.candidates.filter(c => c.label === 'unsafe').length,
       best_min_separation_nm: data.candidates[data.best_candidate_id].min_equivalent_separation_nm,
       best_conflict_s: data.candidates[data.best_candidate_id].conflict_s,
-      ...(data.schema_version >= 2 ? {solution_candidate_id: data.solution_candidate_id, solver_status: data.solver_status,
-        result_min_separation_nm: data.solution_candidate_id == null ? null : data.candidates[data.solution_candidate_id].min_equivalent_separation_nm} : {}),
+      solution_candidate_id: data.solution_candidate_id, solver_status: data.solver_status,
+      result_min_separation_nm: data.solution_candidate_id == null ? null : data.candidates[data.solution_candidate_id].min_equivalent_separation_nm,
       json: `${name}.json`, safe_csv: `${name}-safe.csv`, unsafe_csv: `${name}-unsafe.csv`});
   }
   fs.writeFileSync(path.join(options.out, `summary-seed-${options.seed}.json`), JSON.stringify(summary, null, 2) + '\n', {flag: 'wx'});

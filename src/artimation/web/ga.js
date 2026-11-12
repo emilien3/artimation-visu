@@ -5,13 +5,7 @@
   const CM = root.ConflictModel || require('./model.js');
   const ALPHAS = [-40, -35, -30, -25, -20, -15, -10, -5, 5, 10, 15, 20, 25, 30, 35, 40]; // Observed ENAC range; idle genes handle 0°.
   const LEVELS = [-2000, -1000, 1000, 2000];                                       // Altitude offsets (ft) when `vertical` is enabled.
-  function rng(seed) { // mulberry32
-    let a = (seed >>> 0) + 0x6D2B79F5;
-    const u = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const r = {u, uniform: (lo, hi) => lo + (hi - lo) * u(), choice: arr => arr[Math.floor(u() * arr.length)], int: (lo, hi) => lo + Math.floor(u() * (hi - lo)),
-               normal: (m, s) => m + s * Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u())};
-    return r;
-  }
+  const rng = CM.rng;
   const DEFAULTS = {pop: 100, generations: 100, elite: 2, tournament: 3, pCross: 0.7, pMut: 0.4, immigrants: 0.1, seed: 0, sep: 7, sepV: 1000, vertical: false, window: Infinity};
 
   function randomGene(R, route, vertical, win) {

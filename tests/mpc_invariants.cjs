@@ -1,7 +1,6 @@
 const assert = require('node:assert/strict');
 const CM = require('../src/artimation/web/model.js');
 const E = require('../src/artimation/web/exploration.js');
-const MILP = require('../src/artimation/web/milp.js');
 const MPC = require('../src/artimation/web/mpc.js');
 const near = (a, b, tolerance = 1e-8) => assert(Math.abs(a - b) <= tolerance, `${a} != ${b}`);
 const at = (p, t) => [CM.interp(p.t, p.x, t), CM.interp(p.t, p.y, t)];
@@ -66,10 +65,10 @@ for (const key of ['crossing-2', 'convergence-4']) {
 }
 
 // Inspect the actual optimization calls: the second plan must start only 20 s later, at the first plan's executed position.
-const scn = E.scenario('crossing-2'), calls = [], makeCatalogue = MILP.makeCatalogue, solve = MILP.solveCatalogueSync;
-MILP.makeCatalogue = (routes, cfg) => { calls.push({routes}); return makeCatalogue(routes, cfg); };
-MILP.solveCatalogueSync = (catalogues, cfg) => {
-  const selected = solve(catalogues, cfg), call = calls.at(-1);
+const scn = E.scenario('crossing-2'), calls = [], candidatePlans = MPC.candidatePlans, selectPlans = MPC.selectPlans;
+MPC.candidatePlans = (routes, cfg) => { calls.push({routes}); return candidatePlans(routes, cfg); };
+MPC.selectPlans = (catalogues, costs, cfg) => {
+  const selected = selectPlans(catalogues, costs, cfg), call = calls.at(-1);
   call.catalogues = catalogues; call.cfg = cfg; call.solution = selected;
   return selected;
 };
@@ -84,7 +83,23 @@ try {
     near(Math.hypot(...r.xy[0].map((v, k) => v - scn.routes[a].xy[0][k])), 2);
   });
   near(calls[0].cfg.tmax, 400); near(calls[1].cfg.tmax, 420);
-} finally { MILP.makeCatalogue = makeCatalogue; MILP.solveCatalogueSync = solve; }
+} finally { MPC.candidatePlans = candidatePlans; MPC.selectPlans = selectPlans; }
+
+// The controller is self-contained: it must not load another solver, and its optimizer must be exact.
+const source = require('node:fs').readFileSync(require.resolve('../src/artimation/web/mpc.js'), 'utf8');
+assert(!/milp|MILPSolver|ga\.js|GeneticSolver/.test(source), 'MPC must not depend on another method');
+{
+  const plans = MPC.candidatePlans(E.scenario('convergence-4').routes, MPC.DEFAULTS), costs = plans.map(c => c.map(o => 0.02 * o.extra + 0.05 * o.maneuvering));
+  const cfg = {sep: 7, sepV: 1000, tmax: 400, nodeLimit: 1e7}, selected = MPC.selectPlans(plans, costs, cfg);
+  const ok = (a, i, b, j) => { const s = CM.pairStats(plans[a][i].path, plans[b][j].path, 7, 1000, 400); return s.dmin >= 7 && s.conflict === 0; };
+  let best = Infinity; const pick = [];
+  (function search(depth, cost) {
+    if (cost >= best) return;
+    if (depth === plans.length) { best = cost; return; }
+    for (let k = 0; k < plans[depth].length; k++) if (pick.every((i, a) => ok(a, i, depth, k))) { pick[depth] = k; search(depth + 1, cost + costs[depth][k]); pick.length = depth; }
+  })(0, 0);
+  assert.equal(selected.termination, 'optimal'); near(selected.cost, best, 1e-12);
+}
 
 for (const options of [{horizon: 0}, {horizon: 10, controlStep: 20}, {controlStep: 0}, {maxTime: NaN}, {maxTime: 1},
   {nodeLimit: 0}, {nodeLimit: 1.5}, {sep: -1}, {sepV: -1}, {seed: .5}, {vertical: true}, {costWeights: {terminal: -1}}, {costWeights: {unknown: 1}}])

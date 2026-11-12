@@ -114,7 +114,7 @@ process.stdout.write(JSON.stringify({data,meta:result.meta,commands:result.contr
   bestIdx:result.bestIdx,finalIdx:result.finalIdx,safe:E.csv(data,'safe'),unsafe:E.csv(data,'unsafe')}));
 """, method, scenario)
     data = payload["data"]
-    assert data["schema_version"] == 2
+    assert data["schema_version"] == 3
     assert data["algorithm"] == method
     assert data["best_candidate_id"] == payload["bestIdx"]
     assert data["solution_candidate_id"] == payload["finalIdx"]
@@ -124,15 +124,17 @@ process.stdout.write(JSON.stringify({data,meta:result.meta,commands:result.contr
     assert data["candidates"][data["solution_candidate_id"]]["label"] == "safe"
     for index, candidate in enumerate(data["candidates"]):
         assert candidate["candidate_id"] == index
-        assert candidate["method"] == payload["meta"][index]
-        assert candidate["commands"] == payload["commands"][index]
+        assert candidate["method"] == {"time_s": None, "objective": None, "termination": None, **payload["meta"][index]}
+        assert candidate["method_commands"] == payload["commands"][index]
+        for command in candidate["commands"]:
+            assert set(command) == {"aircraft_index", "start_s", "end_s", "heading_deg", "speed_kt", "vertical_rate_ft_min"}
         assert candidate["fitness"] == payload["fit"][index]
         assert candidate["generation"] is None
         assert candidate["accepted"] is None
         assert candidate["label"] == ("safe" if all(p["label"] == "safe" for p in candidate["pairs"]) else "unsafe")
-        if method == "orca" and candidate["commands"]:
+        if method == "orca" and candidate["method_commands"]:
             local_costs = []
-            for command in candidate["commands"]:
+            for command in candidate["method_commands"]:
                 local_cost = ((command["vx_nm_s"] - command["preferred_vx_nm_s"]) ** 2
                               + (command["vy_nm_s"] - command["preferred_vy_nm_s"]) ** 2)
                 assert command["local_objective"] == pytest.approx(local_cost, abs=1e-14)
@@ -213,12 +215,13 @@ process.stdout.write(JSON.stringify({checked}));
 
 
 def test_existing_search_traces_keep_their_recorded_numeric_fingerprints():
-    # Captured from the four original seed-0 demo datasets before adding planning methods.
+    # GA: captured from the original seed-0 demo datasets. Annealing: captured after it received its own neighborhood
+    # (it no longer reuses the genetic mutation), so its two fingerprints and run identifiers changed on purpose.
     expected = {
         "crossing-2-ga-0-60x40-2d-3b39c926": "ed880bf7a0d4013dd114187f27d44d04c550dd0f9b5af773ff520c708a37774d",
-        "crossing-2-sa-0-2379-2d-0d2da4fb": "54c9cf53fd27262a4dd5edfebaaa0622e781c7bc85f521bf9e03600832798d3c",
+        "crossing-2-sa-0-2379-2d-c4f0c69a": "d104353d244e7f43645c90a932199d1d4240a5851b96e3e8314c234b94dd7b0a",
         "convergence-4-ga-0-60x40-2d-7d325442": "06b4d2dfc8388bed0c43cf99b5b81f28c438e26ebda3606ad91f8a4215a4b150",
-        "convergence-4-sa-0-2379-2d-2d07afef": "4c2e6378b9586d8ec934e817b0d22e579b89e6a7de1d4a13bcc161b6b802207e",
+        "convergence-4-sa-0-2379-2d-69dadea6": "1f66b81a3056e0be8f53f6b5bc60e61c782eebd67b9e65ee627d8003946cf1db",
     }
     actual = node_json("""
 const E=require('./src/artimation/web/exploration.js'),GA=require('./src/artimation/web/ga.js'),SA=require('./src/artimation/web/annealing.js'),crypto=require('node:crypto');
@@ -313,3 +316,42 @@ process.stdout.write(JSON.stringify({routes:scenario.routes,catalogues,result}))
     assert payload["result"]["termination"] == "optimal"
     assert reference.fun == pytest.approx(payload["result"]["cost"], abs=1e-9)
     assert len(upper) - len(catalogues) == payload["result"]["incompatibilities"]
+
+
+def test_every_method_exports_the_same_schema():
+    payload = node_json("""
+const E=require('./src/artimation/web/exploration.js'),names={genetic:'ga',annealing:'annealing',orca:'orca',mpc:'mpc',milp:'milp'},out={};
+for(const [name,file] of Object.entries(names)) {
+ const scenario=E.scenario('crossing-2'),solver=require('./src/artimation/web/'+file+'.js');
+ const data=E.dataset(scenario,solver.runSync(scenario.routes,name==='genetic'?{pop:12,generations:4}:name==='annealing'?{iterations:60}:{}));
+ out[name]={data:{...data,candidates:[data.candidates[0],data.candidates[data.solution_candidate_id]]},header:E.csv(data,'safe').split('\\r\\n')[0]};
+}
+process.stdout.write(JSON.stringify(out));
+""")
+    reference = payload["genetic"]
+    for name, item in payload.items():
+        data, expected = item["data"], reference["data"]
+        assert data["schema_version"] == 3
+        assert item["header"] == reference["header"], name
+        assert set(data) == set(expected), name
+        assert set(data["model"]) == set(expected["model"]), name
+        assert data["solver_status"] and data["solution_candidate_id"] is not None, name
+        baseline, solution = data["candidates"]
+        assert baseline["method"]["kind"] == "baseline" and solution["label"] == "safe", name
+        for candidate in data["candidates"]:
+            assert set(candidate) == set(expected["candidates"][0]), name
+            assert {"kind", "time_s", "objective", "termination"} <= set(candidate["method"]), name
+            assert set(candidate["trajectories"][0]) == set(expected["candidates"][0]["trajectories"][0]), name
+            # The common instructions must rebuild the exported trajectory, whatever the method.
+            for index, trajectory in enumerate(candidate["trajectories"]):
+                knots, legs = trajectory["knots"], [c for c in candidate["commands"] if c["aircraft_index"] == index]
+                assert legs[0]["start_s"] == knots[0]["t_s"] and legs[-1]["end_s"] == knots[-1]["t_s"]
+                x, y = knots[0]["x_nm"], knots[0]["y_nm"]
+                for before, leg in zip([None] + legs, legs):
+                    assert set(leg) == {"aircraft_index", "start_s", "end_s", "heading_deg", "speed_kt", "vertical_rate_ft_min"}
+                    assert before is None or before["end_s"] == leg["start_s"]
+                    if leg["heading_deg"] is not None:
+                        distance = leg["speed_kt"] / 3600 * (leg["end_s"] - leg["start_s"])
+                        x += distance * np.sin(np.radians(leg["heading_deg"]))
+                        y -= distance * np.cos(np.radians(leg["heading_deg"]))
+                assert x == pytest.approx(knots[-1]["x_nm"], abs=1e-6) and y == pytest.approx(knots[-1]["y_nm"], abs=1e-6), name

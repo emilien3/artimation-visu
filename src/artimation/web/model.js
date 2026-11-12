@@ -208,6 +208,14 @@
     });
   }
 
-  root.ConflictModel = {FT_PER_S, DEFAULT_WEIGHTS, fitnessWeights, makeRoute, routeFromAircraft, routeLength, maneuverPath, verticalProfile, fullPath, pathSamples, stateAt, pairStats, evaluate, evaluatePaths, instructions, interp, hActive, vActive, clamp, commandStart};
+  // Seeded generator (mulberry32) shared by the stochastic solvers; it belongs to no method.
+  function rng(seed) {
+    let a = (seed >>> 0) + 0x6D2B79F5;
+    const u = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    return {u, uniform: (lo, hi) => lo + (hi - lo) * u(), choice: arr => arr[Math.floor(u() * arr.length)], int: (lo, hi) => lo + Math.floor(u() * (hi - lo)),
+            normal: (m, s) => m + s * Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u())};
+  }
+
+  root.ConflictModel = {rng, FT_PER_S, DEFAULT_WEIGHTS, fitnessWeights, makeRoute, routeFromAircraft, routeLength, maneuverPath, verticalProfile, fullPath, pathSamples, stateAt, pairStats, evaluate, evaluatePaths, instructions, interp, hActive, vActive, clamp, commandStart};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.ConflictModel;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
