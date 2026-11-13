@@ -27,6 +27,7 @@ Open http://localhost:8501. Use `--port 8502` if the port is taken. Node.js is r
 - **Studio:** place and drag aircraft, edit heading, speed and altitude, play the situation, and inspect encounters. Run the genetic solver to get a conflict-free solution with controller instructions, 2D and 3D views, and a heatmap of the explored trajectories.
 - **Trajectory Explorer:** two- and four-aircraft toy scenarios (all at FL360, 7 NM separation). Browse every recorded joint plan, inspect each aircraft's safe and conflicting paths, and export JSON and labeled CSV datasets.
 - **Five methods:** genetic algorithm, simulated annealing, ORCA, MPC and MILP.
+- **Papers:** step-by-step interactive pictures of three papers: arrival scheduling as a QUBO solved with QAOA (Cassassolles, Kwa et al. 2026), urban drone path planning with a potential-field QUBO (Kwa et al. 2026), and trajectory de-conflicting with departure delays on a quantum annealer (Stollenwerk et al. 2020). QAOA results come from an exact simulation; arrival times, the drone map and the example flights are illustrative.
 
 The separation cylinder is 7 NM horizontally and 1,000 ft vertically. A conflict requires both limits to be violated.
 

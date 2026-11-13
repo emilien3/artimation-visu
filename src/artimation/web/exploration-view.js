@@ -212,24 +212,25 @@
     a.href = url; a.download = `${state.data.run_id}-${json ? 'complete.json' : `${kind}.csv`}`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function selectTab(explorer, focus = false) {
-    if (explorer && !$('studio').hidden) {
+  const TABS = [['close-exploration', 'studio'], ['open-exploration', 'exploration-lab'], ['open-kwa', 'kwa-lab']];
+  function selectTab(index, focus = false) {
+    if (index !== 0 && !$('studio').hidden) {
       playingSearch = VectorPlus.state.playing;
       if (playingSearch) $('play').click();
     }
-    $('studio').hidden = explorer; $('exploration-lab').hidden = !explorer;
-    for (const [id, active] of [['close-exploration', !explorer], ['open-exploration', explorer]]) {
-      $(id).setAttribute('aria-selected', String(active)); $(id).tabIndex = active ? 0 : -1;
-      if (active && focus) $(id).focus();
-    }
-    if (!explorer) {
+    TABS.forEach(([tab, panel], i) => {
+      const active = i === index;
+      $(panel).hidden = !active; $(tab).setAttribute('aria-selected', String(active)); $(tab).tabIndex = active ? 0 : -1;
+      if (active && focus) $(tab).focus();
+    });
+    if (index === 0) {
       VectorPlus.render();
       if (playingSearch && !VectorPlus.state.playing) $('play').click();
       playingSearch = false;
     }
+    if (index === 2) KwaView.render();
   }
-  $('open-exploration').onclick = () => selectTab(true);
-  $('close-exploration').onclick = () => selectTab(false);
+  TABS.forEach(([tab], i) => { $(tab).onclick = () => selectTab(i); });
   document.addEventListener('pointerdown', event => {
     for (const id of ['display-settings', 'lab-settings']) {
       const details = $(id);
@@ -239,7 +240,8 @@
   document.querySelector('[role="tablist"]').onkeydown = event => {
     if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       event.preventDefault();
-      selectTab(event.key === 'End' || (event.key !== 'Home' && $('exploration-lab').hidden), true);
+      const current = TABS.findIndex(([, panel]) => !$(panel).hidden), n = TABS.length;
+      selectTab({Home: 0, End: n - 1, ArrowLeft: (current + n - 1) % n, ArrowRight: (current + 1) % n}[event.key], true);
     }
   };
   $('lab-run').onclick = run;

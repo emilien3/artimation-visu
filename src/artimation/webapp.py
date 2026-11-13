@@ -25,7 +25,7 @@ def to_vector_frame(scn):
                  enacStart=None if r.enac_start is None else point(r.enac_start)) for r in scn.routes]
 
 
-ORDER = ["physics.js", "density.js", "density-view.js", "model.js", "ga.js", "annealing.js", "orca.js", "milp.js", "mpc.js", "view3d.js", "charts.js", "app.js", "exploration.js", "exploration-view.js"]
+ORDER = ["physics.js", "density.js", "density-view.js", "model.js", "ga.js", "annealing.js", "orca.js", "milp.js", "mpc.js", "view3d.js", "charts.js", "app.js", "exploration.js", "kwa-model.js", "kwa-ui.js", "kwa-arrivals.js", "kwa-drones.js", "kwa-stollenwerk.js", "kwa-view.js", "exploration-view.js"]
 
 
 def scenarios_payload():

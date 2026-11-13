@@ -15,6 +15,10 @@ ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node absent")
 
 
+def test_kwa_model_invariants():
+    subprocess.run(["node", str(Path(__file__).with_name("kwa_invariants.cjs"))], check=True)
+
+
 def test_exploration_and_annealing_invariants():
     subprocess.run(["node", str(Path(__file__).with_name("exploration_invariants.cjs"))], check=True)
 

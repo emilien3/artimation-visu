@@ -96,3 +96,25 @@
 .lab-path-key{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:12px 0 16px}
 .lab-export h2{margin:0 auto 0 0}.lab-browser{padding:12px}.lab-metrics>div{padding:10px 14px}.lab-metrics b{font-size:19px}
 @media(max-width:760px){.workspace{height:auto}.workspace-nav{padding:0 16px;gap:18px;flex-wrap:wrap}.workspace-nav nav{gap:18px}.workspace-nav [role=tab]{font-size:12px}.workspace-brand{font-size:18px}.lab-header{align-items:flex-start;flex-direction:column;gap:8px}.lab-advanced{position:static;width:min(360px,calc(100vw - 64px));box-shadow:none;margin-top:12px}.display-settings-body{max-height:65vh;overflow:auto}.lab-controls{gap:12px}.view-title .brand-mark{display:none}}
+
+/* Papers tab: step-by-step visual explainers of research papers. */
+.kwa-lab{max-width:1500px;margin:0 auto;padding:22px 32px 36px}
+.kwa-header{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:16px}.kwa-header h1{font-size:26px}
+.kwa-papers{display:flex;gap:8px;flex-wrap:wrap}.kwa-papers [aria-pressed=true]{background:#17353a;border-color:#3a746f;color:var(--mint)}
+.kwa-steps{list-style:none;display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;padding:0}
+.kwa-steps button{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:13px;color:var(--muted);white-space:pre}
+.kwa-steps [aria-current=step]{background:var(--mint);border-color:var(--mint);color:#102c2b;font-weight:600}
+.kwa-caption{display:flex;align-items:center;gap:14px;margin-bottom:14px}.kwa-caption p{flex:1;font-size:17px;line-height:1.5;min-height:52px;display:flex;align-items:center}
+.kwa-stage{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}
+#kwa-canvas{display:block;width:100%;height:auto;aspect-ratio:1100/620;background:var(--panel);border:1px solid var(--line);border-radius:10px;touch-action:none;cursor:pointer}
+.kwa-side{display:flex;flex-direction:column;gap:16px}
+.kwa-controls{display:flex;flex-direction:column;gap:12px}.kwa-controls:empty{display:none}
+.kwa-controls label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.kwa-controls .kwa-check{flex-direction:row;align-items:center;gap:8px;color:var(--text);font-size:13px}
+.kwa-range{display:flex;align-items:center;gap:10px}.kwa-range input{flex:1}.kwa-range output{min-width:44px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.kwa-stats{display:flex;flex-direction:column;gap:8px}
+.kwa-stats>div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kwa-stats span{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px}.kwa-stats b{font-size:17px;font-weight:600}
+.kwa-stats .good{color:var(--mint)}.kwa-stats .bad{color:var(--red)}
+.kwa-source{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.6}
+@media(max-width:900px){.kwa-lab{padding:14px}.kwa-stage{grid-template-columns:1fr}.kwa-stats{flex-direction:row;flex-wrap:wrap}.kwa-stats>div{flex:1;min-width:130px}}

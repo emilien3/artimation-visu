@@ -38,7 +38,7 @@
     // ---- Vertical scaling
     scaleZ() {
       const d = this.data, ax = d.axis;
-      if (ax === 'time') { const tm = d.tmax; return {zv: (t, ft) => t / tm * ZH, label: 'temps (s)', ticks: [0, 0.25, 0.5, 0.75, 1].map(f => [f * tm, Math.round(f * tm) + ' s']), floor: 0, tmax: tm}; }
+      if (ax === 'time') { const tm = d.tmax; return {zv: (t, ft) => t / tm * ZH, label: 'time (s)', ticks: [0, 0.25, 0.5, 0.75, 1].map(f => [f * tm, Math.round(f * tm) + ' s']), floor: 0, tmax: tm}; }
       if (ax === 'relief') return {zv: () => ZH * 0.55, label: 'density (relief)', ticks: [], floor: ZH * 0.45};
       const lo = d.altMin, hi = d.altMax, step = hi - lo <= 8000 ? 1000 : 2000, ticks = [];
       for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push([v, 'FL' + Math.round(v / 100)]);

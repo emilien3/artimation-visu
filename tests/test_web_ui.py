@@ -339,14 +339,17 @@ def test_workspace_tabs_keyboard_accessibility_and_preserved_playback(app):
     assert js(app, f"return JSON.stringify({V}.state.aircraft)") == original
     assert wait(app, f"return {V}.state.time > {paused}")
     app.find_element(By.ID, "play").click()
-    studio.send_keys(Keys.END)
+    studio.send_keys(Keys.ARROW_RIGHT)
     assert explorer.get_attribute("aria-selected") == "true"
     assert app.find_element(By.ID, "lab-scenario").get_attribute("value") == "convergence-4"
     assert app.find_element(By.ID, "lab-algorithm").get_attribute("value") == "mpc"
+    kwa = app.find_element(By.ID, "open-kwa")
     explorer.send_keys(Keys.ARROW_RIGHT)
+    assert kwa.get_attribute("aria-selected") == "true"
+    kwa.send_keys(Keys.ARROW_RIGHT)
     assert studio.get_attribute("aria-selected") == "true"
     studio.send_keys(Keys.ARROW_LEFT)
-    assert explorer.get_attribute("aria-selected") == "true"
+    assert kwa.get_attribute("aria-selected") == "true"
 
 
 def test_loads_with_demo_and_all_scenarios(app):
@@ -592,3 +595,25 @@ def test_separation_zones_match_current_horizontal_and_vertical_conflicts(app, t
     assert app.find_elements(By.CSS_SELECTOR, '[data-zone][data-conflict="true"]')
     js(app, f'{V}.state.time=2; {V}.render();')
     assert not app.find_elements(By.CSS_SELECTOR, '[data-zone][data-conflict="true"]')
+
+
+def test_kwa_tab_steps_render_and_respond(app):
+    kwa = app.find_element(By.ID, "open-kwa")
+    app.find_element(By.ID, "close-exploration").send_keys(Keys.END)
+    assert kwa.get_attribute("aria-selected") == "true" and app.find_element(By.ID, "kwa-lab").is_displayed()
+    assert not app.find_element(By.ID, "studio").is_displayed()
+    for paper, steps in (("arrivals", 7), ("drones", 6), ("stollenwerk", 6)):
+        app.find_element(By.ID, f"kwa-paper-{paper}").click()
+        assert len(app.find_elements(By.CSS_SELECTOR, "#kwa-steps button")) == steps
+        for index in range(steps):
+            js(app, f"KwaView.select('{paper}', {index})")
+            assert app.find_element(By.CSS_SELECTOR, "#kwa-steps [aria-current=step]").text.startswith(str(index + 1))
+            assert app.find_element(By.ID, "kwa-caption").text
+            assert app.find_elements(By.CSS_SELECTOR, "#kwa-stats > div")
+            painted = "const c=document.getElementById('kwa-canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let k=3;k<d.length;k+=4)if(d[k])n++;return n"
+            assert js(app, painted) > 20000
+    app.find_element(By.ID, "kwa-prev").click()
+    assert js(app, "return KwaView.state.step.stollenwerk") == 4
+    js(app, "KwaView.select('drones', 4)")
+    js(app, "KwaPapers.drones.state.K = 1e8; KwaView.render()")
+    assert "illegal command" in app.find_element(By.ID, "kwa-stats").text

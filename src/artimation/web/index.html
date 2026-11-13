@@ -10,6 +10,7 @@
   <nav role="tablist" aria-label="Workspace">
     <button id="close-exploration" role="tab" aria-controls="studio" aria-selected="true">Studio</button>
     <button id="open-exploration" role="tab" aria-controls="exploration-lab" aria-selected="false" tabindex="-1">Trajectory Explorer</button>
+    <button id="open-kwa" role="tab" aria-controls="kwa-lab" aria-selected="false" tabindex="-1">Papers</button>
   </nav>
 </header>
 <main class="workspace" id="studio" role="tabpanel" aria-labelledby="close-exploration">
@@ -175,6 +176,19 @@
     </div>
     <section class="lab-export"><h2>Export run</h2><button id="lab-export-json" class="button">JSON</button><button id="lab-export-safe" class="button">Safe CSV</button><button id="lab-export-unsafe" class="button">Conflict CSV</button></section>
   </section>
+</main>
+<main id="kwa-lab" class="kwa-lab" role="tabpanel" aria-labelledby="open-kwa" hidden>
+  <header class="kwa-header">
+    <h1>Papers</h1>
+    <div class="kwa-papers" role="group" aria-label="Paper"><button id="kwa-paper-arrivals" class="button" aria-pressed="true"></button><button id="kwa-paper-drones" class="button" aria-pressed="false"></button><button id="kwa-paper-stollenwerk" class="button" aria-pressed="false"></button></div>
+  </header>
+  <ol id="kwa-steps" class="kwa-steps" aria-label="Steps"></ol>
+  <div class="kwa-caption"><button id="kwa-prev" class="button" aria-label="Previous step">←</button><p id="kwa-caption" role="status"></p><button id="kwa-next" class="button" aria-label="Next step">→</button></div>
+  <section class="kwa-stage">
+    <canvas id="kwa-canvas" role="img" aria-label="Interactive picture for this step"></canvas>
+    <aside class="kwa-side"><div id="kwa-controls" class="kwa-controls"></div><div id="kwa-stats" class="kwa-stats"></div></aside>
+  </section>
+  <p id="kwa-source" class="kwa-source"></p>
 </main>
 <script>{{DATA}}</script>
 {{SCRIPTS}}
